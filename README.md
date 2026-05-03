@@ -67,7 +67,7 @@ Publish Windows x64:
 dotnet publish src/WorldOrder.Desktop/WorldOrder.Desktop.csproj -c Release -r win-x64 --self-contained true -o artifacts/windows/win-x64 /p:PublishSingleFile=true
 ```
 
-Publish a signed Android APK:
+Publish a signed Android APK. Android ABIs are configured in `src/WorldOrder.Android/WorldOrder.Android.csproj` so semicolon-separated ABI values do not need to be passed on the command line:
 
 ```bash
 dotnet publish src/WorldOrder.Android/WorldOrder.Android.csproj \
@@ -79,7 +79,7 @@ dotnet publish src/WorldOrder.Android/WorldOrder.Android.csproj \
   -p:AndroidSigningKeyPass=worldorder \
   -p:AndroidSigningStorePass=worldorder \
   -p:AndroidPackageFormats=apk \
-  -p:AndroidSupportedAbis='armeabi-v7a;arm64-v8a;x86;x86_64'
+  -p:AndroidCreatePackagePerAbi=false
 ```
 
 ## GitHub Actions outputs

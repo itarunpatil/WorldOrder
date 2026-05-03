@@ -27,8 +27,8 @@ public sealed class InputState
         PreviousKeyboard = Keyboard;
         PreviousMouse = Mouse;
         PreviousPointer = Pointer;
-        Keyboard = active ? Keyboard.GetState() : default;
-        Mouse = active ? Mouse.GetState() : default;
+        Keyboard = active ? Microsoft.Xna.Framework.Input.Keyboard.GetState() : default;
+        Mouse = active ? Microsoft.Xna.Framework.Input.Mouse.GetState() : default;
         Touches = active ? TouchPanel.GetState() : default;
         HasTouch = Touches.Count > 0;
 
