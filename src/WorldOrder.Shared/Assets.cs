@@ -37,6 +37,10 @@ public sealed class AssetBank : IDisposable
             Load($"gun_neutral_{name}", $"Content/Assets/Tanks/gun_blue_{name}.png");
         }
 
+        for (int i = 0; i <= 3; i++) Load($"terrain_sand_{i}", $"Content/Assets/Terrain/generated_sand_{i}.png");
+        Load("terrain_road", "Content/Assets/Terrain/generated_road.png");
+        Load("terrain_rock", "Content/Assets/Terrain/generated_rock.png");
+        Load("terrain_water", "Content/Assets/Terrain/generated_water.png");
         for (int i = 1; i <= 17; i++) Load($"tile_{i}", $"Content/Assets/Terrain/tile_{i}.png");
         for (int i = 1; i <= 26; i++) LoadOptional($"road_{i}", $"Content/Assets/Terrain/rpg_road_{i}.png");
         LoadOptional("lake", "Content/Assets/Terrain/rpg_lake.png");

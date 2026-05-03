@@ -35,9 +35,10 @@ public sealed class Game1 : Game
     protected override void Initialize()
     {
         Window.Title = "World Order - Phase 1";
+        Window.AllowUserResizing = !IsMobile;
         _graphics.SynchronizeWithVerticalRetrace = true;
-        _graphics.PreferredBackBufferWidth = IsMobile ? 1280 : 1600;
-        _graphics.PreferredBackBufferHeight = IsMobile ? 720 : 900;
+        _graphics.PreferredBackBufferWidth = 1280;
+        _graphics.PreferredBackBufferHeight = 720;
         _graphics.IsFullScreen = IsMobile;
         _graphics.ApplyChanges();
         base.Initialize();

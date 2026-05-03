@@ -12,7 +12,7 @@ public sealed class GameScreen : IGameScreen
     private readonly Game1 _game;
     private readonly RtsSession _session;
     private Vector2 _camera;
-    private float _zoom = 0.82f;
+    private float _zoom = 0.72f;
     private bool _draggingSelection;
     private Vector2 _selectStart;
     private Vector2 _selectEnd;
@@ -48,12 +48,51 @@ public sealed class GameScreen : IGameScreen
     {
         _uiBlockers.Clear();
         var vp = _game.GraphicsDevice.Viewport;
-        _uiBlockers.Add(new Rectangle(0, 0, vp.Width, 70));
-        _uiBlockers.Add(new Rectangle(0, vp.Height - 116, vp.Width, 116));
-        _uiBlockers.Add(new Rectangle(vp.Width - 245, 82, 228, 174));
+        _uiBlockers.Add(TopBar(vp));
+        _uiBlockers.Add(BottomBar(vp));
+        _uiBlockers.Add(MiniMapRect(vp));
     }
 
     private bool PointerOverUi(InputState input) => _uiBlockers.Any(r => r.Contains(input.Pointer));
+
+    private static Rectangle TopBar(Viewport vp) => new(0, 0, vp.Width, 72);
+    private static int BottomBarHeight(Viewport vp) => vp.Height < 650 ? 104 : 116;
+    private static Rectangle BottomBar(Viewport vp) => new(0, vp.Height - BottomBarHeight(vp), vp.Width, BottomBarHeight(vp));
+
+    private static Rectangle MiniMapRect(Viewport vp)
+    {
+        int width = Math.Clamp(vp.Width / 7, 150, 220);
+        int height = Math.Clamp(vp.Height / 5, 116, 164);
+        return new Rectangle(vp.Width - width - 18, 86, width, height);
+    }
+
+    private static Rectangle LightButton(Viewport vp)
+    {
+        var bar = BottomBar(vp);
+        int w = Math.Clamp((vp.Width - 720) / 5 + 150, 132, 180);
+        return new Rectangle(22, bar.Y + 20, w, 54);
+    }
+
+    private static Rectangle HeavyButton(Viewport vp)
+    {
+        var first = LightButton(vp);
+        int w = Math.Clamp(first.Width + 8, 140, 188);
+        return new Rectangle(first.Right + 12, first.Y, w, first.Height);
+    }
+
+    private static Rectangle CenterButton(Viewport vp)
+    {
+        var second = HeavyButton(vp);
+        int w = Math.Clamp(second.Width + 8, 150, 196);
+        return new Rectangle(second.Right + 12, second.Y, w, second.Height);
+    }
+
+    private static Rectangle BackButton(Viewport vp)
+    {
+        var bar = BottomBar(vp);
+        int w = Math.Clamp(vp.Width / 10, 112, 144);
+        return new Rectangle(vp.Width - w - 22, bar.Y + 20, w, 54);
+    }
 
     private void HandleCamera(InputState input, float dt)
     {
@@ -84,8 +123,20 @@ public sealed class GameScreen : IGameScreen
             _zoom = MathHelper.Clamp(_zoom + Math.Sign(input.ScrollDelta) * 0.08f, 0.45f, 1.45f);
         }
 
-        _camera.X = MathHelper.Clamp(_camera.X, 0, _session.Map.PixelWidth);
-        _camera.Y = MathHelper.Clamp(_camera.Y, 0, _session.Map.PixelHeight);
+        ClampCamera();
+    }
+
+    private void ClampCamera()
+    {
+        var vp = _game.GraphicsDevice.Viewport;
+        float halfW = vp.Width / (2f * _zoom);
+        float halfH = vp.Height / (2f * _zoom);
+        float minX = Math.Min(halfW, _session.Map.PixelWidth / 2f);
+        float maxX = Math.Max(minX, _session.Map.PixelWidth - halfW);
+        float minY = Math.Min(halfH, _session.Map.PixelHeight / 2f);
+        float maxY = Math.Max(minY, _session.Map.PixelHeight - halfH);
+        _camera.X = MathHelper.Clamp(_camera.X, minX, maxX);
+        _camera.Y = MathHelper.Clamp(_camera.Y, minY, maxY);
     }
 
     private void HandleCommands(InputState input)
@@ -97,10 +148,10 @@ public sealed class GameScreen : IGameScreen
         }
 
         var vp = _game.GraphicsDevice.Viewport;
-        var lightButton = new Rectangle(24, vp.Height - 96, 180, 56);
-        var heavyButton = new Rectangle(218, vp.Height - 96, 190, 56);
-        var centerButton = new Rectangle(422, vp.Height - 96, 190, 56);
-        var backButton = new Rectangle(vp.Width - 162, vp.Height - 96, 138, 56);
+        var lightButton = LightButton(vp);
+        var heavyButton = HeavyButton(vp);
+        var centerButton = CenterButton(vp);
+        var backButton = BackButton(vp);
         if (lightButton.Contains(input.Pointer) && input.PointerReleased)
         {
             if (!_session.TryBuildTank(UnitKind.LightTank)) ShowToast("Need 170 supplies and an active command center");
@@ -116,6 +167,7 @@ public sealed class GameScreen : IGameScreen
         if (centerButton.Contains(input.Pointer) && input.PointerReleased)
         {
             _camera = _session.Map.PlayerSpawn;
+            ClampCamera();
             return;
         }
         if (backButton.Contains(input.Pointer) && input.PointerReleased)
@@ -244,7 +296,7 @@ public sealed class GameScreen : IGameScreen
     {
         var vp = _game.GraphicsDevice.Viewport;
         var matrix = CameraMatrix();
-        batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone, null, matrix);
+        batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone, null, matrix);
         DrawMap(batch);
         DrawProps(batch);
         DrawProjectiles(batch);
@@ -375,42 +427,54 @@ public sealed class GameScreen : IGameScreen
     private void DrawUi(GameTime time, SpriteBatch batch)
     {
         var vp = _game.GraphicsDevice.Viewport;
+        var top = TopBar(vp);
+        var bottom = BottomBar(vp);
         batch.Begin(samplerState: SamplerState.PointClamp);
-        UiKit.Fill(batch, _game.Pixel, new Rectangle(0, 0, vp.Width, 70), new Color(31, 25, 20, 245));
-        UiKit.Fill(batch, _game.Pixel, new Rectangle(0, 68, vp.Width, 3), UiKit.Accent);
-        _game.Font.Draw(batch, "WORLD ORDER", new Vector2(22, 18), UiKit.Ink, 0.88f);
-        _game.Font.Draw(batch, $"SUPPLIES {_session.Supplies}", new Vector2(250, 18), UiKit.Ink, 0.78f);
-        _game.Font.Draw(batch, $"UNITS {_session.Units.Count(u => u.Faction == FactionKind.Player)}", new Vector2(450, 18), UiKit.InkDim, 0.68f);
-        _game.Font.Draw(batch, _session.Objective, new Vector2(610, 18), UiKit.InkDim, 0.62f);
+
+        UiKit.Fill(batch, _game.Pixel, top, new Color(31, 25, 20, 246));
+        UiKit.Fill(batch, _game.Pixel, new Rectangle(0, top.Bottom - 4, vp.Width, 4), UiKit.Accent);
+        UiKit.DrawFitted(_game, batch, "WORLD ORDER", new Vector2(22, 18), UiKit.Ink, 0.78f, 210);
+        UiKit.DrawFitted(_game, batch, $"SUPPLIES {_session.Supplies}", new Vector2(238, 18), UiKit.Ink, 0.67f, 190);
+        UiKit.DrawFitted(_game, batch, $"UNITS {_session.Units.Count(u => u.Faction == FactionKind.Player)}", new Vector2(426, 18), UiKit.InkDim, 0.58f, 140);
+        UiKit.DrawFitted(_game, batch, _session.Objective, new Vector2(590, 18), UiKit.InkDim, 0.54f, Math.Max(220, vp.Width - 860));
         DrawMiniMap(batch);
 
-        UiKit.Fill(batch, _game.Pixel, new Rectangle(0, vp.Height - 116, vp.Width, 116), new Color(31, 25, 20, 245));
-        UiKit.Fill(batch, _game.Pixel, new Rectangle(0, vp.Height - 116, vp.Width, 3), UiKit.Accent);
-        var lightButton = new Rectangle(24, vp.Height - 96, 180, 56);
-        var heavyButton = new Rectangle(218, vp.Height - 96, 190, 56);
-        var centerButton = new Rectangle(422, vp.Height - 96, 190, 56);
-        var backButton = new Rectangle(vp.Width - 162, vp.Height - 96, 138, 56);
-        UiKit.Button(_game, batch, _lastInput, lightButton, "BUILD LT 170", true, 0.58f);
-        UiKit.Button(_game, batch, _lastInput, heavyButton, "BUILD HT 280", true, 0.58f);
-        UiKit.Button(_game, batch, _lastInput, centerButton, "CENTER BASE", true, 0.58f);
+        UiKit.Fill(batch, _game.Pixel, bottom, new Color(31, 25, 20, 246));
+        UiKit.Fill(batch, _game.Pixel, new Rectangle(0, bottom.Y, vp.Width, 4), UiKit.Accent);
+        var lightButton = LightButton(vp);
+        var heavyButton = HeavyButton(vp);
+        var centerButton = CenterButton(vp);
+        var backButton = BackButton(vp);
+        UiKit.Button(_game, batch, _lastInput, lightButton, "BUILD LT 170", true, 0.52f);
+        UiKit.Button(_game, batch, _lastInput, heavyButton, "BUILD HT 280", true, 0.52f);
+        UiKit.Button(_game, batch, _lastInput, centerButton, "CENTER BASE", true, 0.52f);
         UiKit.Button(_game, batch, _lastInput, backButton, "EXIT", true, 0.58f);
-        _game.Font.Draw(batch, _selected.Count == 0 ? "No selection" : $"Selected: {_selected.Count} unit(s)", new Vector2(635, vp.Height - 88), UiKit.Ink, 0.67f);
-        _game.Font.Draw(batch, "Left-drag select | Right-click move/attack | Tap selected units then destination on Android", new Vector2(635, vp.Height - 50), UiKit.InkDim, 0.50f);
+
+        int textX = centerButton.Right + 22;
+        int textRight = backButton.X - 20;
+        int textWidth = Math.Max(160, textRight - textX);
+        if (textWidth > 180)
+        {
+            UiKit.DrawFitted(_game, batch, _selected.Count == 0 ? "No selection" : $"Selected: {_selected.Count} unit(s)", new Vector2(textX, bottom.Y + 24), UiKit.Ink, 0.58f, textWidth);
+            UiKit.DrawFitted(_game, batch, _game.IsMobile ? "Tap selected unit, then tap destination or target." : "Drag-select | Right-click move/attack | Wheel zoom | WASD pan", new Vector2(textX, bottom.Y + 58), UiKit.InkDim, 0.43f, textWidth);
+        }
 
         if (_hintTimer > 0f)
         {
-            var r = new Rectangle(vp.Width / 2 - 360, 86, 720, 46);
-            UiKit.Fill(batch, _game.Pixel, r, new Color(35, 29, 23, 220));
+            int width = Math.Min(720, vp.Width - 120);
+            var r = new Rectangle(vp.Width / 2 - width / 2, top.Bottom + 16, width, 44);
+            UiKit.Fill(batch, _game.Pixel, r, new Color(35, 29, 23, 224));
             UiKit.Outline(batch, _game.Pixel, r, new Color(166, 123, 67), 2);
-            _game.Font.DrawCentered(batch, _toast, r, UiKit.Ink, 0.62f);
+            UiKit.DrawCenteredFitted(_game, batch, _toast, r, UiKit.Ink, 0.54f);
         }
 
         if (_session.Victory || _session.Defeat)
         {
-            var overlay = new Rectangle(vp.Width / 2 - 360, vp.Height / 2 - 120, 720, 240);
+            int ow = Math.Min(720, vp.Width - 120);
+            var overlay = new Rectangle(vp.Width / 2 - ow / 2, vp.Height / 2 - 120, ow, 240);
             UiKit.PanelBox(_game, batch, overlay);
-            _game.Font.DrawCentered(batch, _session.Victory ? "VICTORY" : "DEFEAT", new Rectangle(overlay.X, overlay.Y + 45, overlay.Width, 55), _session.Victory ? UiKit.Green : UiKit.Red, 1.25f);
-            _game.Font.DrawCentered(batch, "Tap or press Enter to return to the world list.", new Rectangle(overlay.X, overlay.Y + 125, overlay.Width, 40), UiKit.InkDim, 0.65f);
+            UiKit.DrawCenteredFitted(_game, batch, _session.Victory ? "VICTORY" : "DEFEAT", new Rectangle(overlay.X, overlay.Y + 45, overlay.Width, 55), _session.Victory ? UiKit.Green : UiKit.Red, 1.15f);
+            UiKit.DrawCenteredFitted(_game, batch, "Tap or press Enter to return to the world list.", new Rectangle(overlay.X + 24, overlay.Y + 125, overlay.Width - 48, 40), UiKit.InkDim, 0.58f);
         }
         batch.End();
     }
@@ -418,8 +482,8 @@ public sealed class GameScreen : IGameScreen
     private void DrawMiniMap(SpriteBatch batch)
     {
         var vp = _game.GraphicsDevice.Viewport;
-        var r = new Rectangle(vp.Width - 245, 82, 228, 174);
-        UiKit.Fill(batch, _game.Pixel, r, new Color(19, 17, 15, 225));
+        var r = MiniMapRect(vp);
+        UiKit.Fill(batch, _game.Pixel, r, new Color(19, 17, 15, 230));
         UiKit.Outline(batch, _game.Pixel, r, new Color(115, 84, 47), 2);
         float sx = r.Width / (float)_session.Map.Width;
         float sy = r.Height / (float)_session.Map.Height;
@@ -428,10 +492,10 @@ public sealed class GameScreen : IGameScreen
         {
             Color c = _session.Map.Tiles[x, y] switch
             {
-                TileKind.Water => new Color(67, 115, 135),
-                TileKind.Rock => new Color(88, 65, 45),
+                TileKind.Water => new Color(67, 126, 150),
+                TileKind.Rock => new Color(101, 76, 52),
                 TileKind.Road => new Color(151, 119, 74),
-                _ => new Color(183, 139, 72)
+                _ => new Color(187, 140, 75)
             };
             UiKit.Fill(batch, _game.Pixel, new Rectangle(r.X + (int)(x * sx), r.Y + (int)(y * sy), Math.Max(1, (int)(sx * 2)), Math.Max(1, (int)(sy * 2))), c);
         }

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 
 namespace WorldOrder;
 
@@ -66,85 +65,93 @@ public sealed class GameMap
     public static GameMap Generate(WorldSettings settings)
     {
         var rand = new Random(settings.Seed);
-        int w = 76;
-        int h = 54;
+        const int w = 76;
+        const int h = 54;
         var map = new GameMap
         {
             Width = w,
             Height = h,
             Tiles = new TileKind[w, h],
             TextureKeys = new string[w, h],
-            PlayerSpawn = new Vector2(9 * 96, h / 2 * 96)
+            PlayerSpawn = new Vector2(12 * 96, h / 2 * 96)
         };
 
         for (int y = 0; y < h; y++)
         {
             for (int x = 0; x < w; x++)
             {
-                map.Tiles[x, y] = TileKind.Sand;
-                int variant = 1 + rand.Next(1, 6);
-                map.TextureKeys[x, y] = "tile_" + variant;
+                SetTile(map, x, y, TileKind.Sand, $"terrain_sand_{rand.Next(0, 4)}");
             }
         }
 
-        DrawRoad(map, new Point(3, h / 2), new Point(w - 5, h / 2 + rand.Next(-5, 6)), 2);
-        DrawRoad(map, new Point(w / 2, 4), new Point(w / 2 + rand.Next(-5, 5), h - 5), 2);
+        // Broad, legible roads: one east-west supply route and one north-south route.
+        DrawRoad(map, new Point(4, h / 2), new Point(w - 6, h / 2 + rand.Next(-4, 5)), 2);
+        DrawRoad(map, new Point(w / 2, 5), new Point(w / 2 + rand.Next(-5, 6), h - 6), 2);
 
         switch (settings.Preset)
         {
             case MapPreset.TwinOasis:
-                Lake(map, new Point(w / 2 - 10, h / 2 - 8), 7, 5);
-                Lake(map, new Point(w / 2 + 14, h / 2 + 8), 8, 6);
+                Lake(map, new Point(w / 2 - 11, h / 2 - 8), 8, 5);
+                Lake(map, new Point(w / 2 + 15, h / 2 + 8), 8, 6);
+                DrawRoad(map, new Point(12, 8), new Point(w - 14, h - 10), 1);
                 break;
             case MapPreset.StonePass:
-                Ridge(map, w / 2 - 8, 10, h - 10);
-                Ridge(map, w / 2 + 9, 7, h - 12);
+                Ridge(map, w / 2 - 11, 11, h - 11);
+                Ridge(map, w / 2 + 12, 9, h - 13);
+                CarvePass(map, w / 2 - 11, h / 2, 7);
+                CarvePass(map, w / 2 + 12, h / 2 + 2, 7);
                 Lake(map, new Point(w - 18, 10), 6, 5);
                 break;
             default:
-                Lake(map, new Point(w / 2 + 5, h / 2), 10, 6);
+                Lake(map, new Point(w / 2 + 6, h / 2), 10, 6);
                 break;
         }
 
-        for (int i = 0; i < 135; i++)
+        // Light terrain features only. Phase 1 should remain playable and readable, not maze-like.
+        for (int cluster = 0; cluster < 16; cluster++)
         {
-            int x = rand.Next(1, w - 2);
-            int y = rand.Next(1, h - 2);
-            if (map.Tiles[x, y] != TileKind.Sand) continue;
-            if (Vector2.Distance(new Vector2(x * 96, y * 96), map.PlayerSpawn) < 850) continue;
-            if (rand.NextDouble() < 0.38)
+            int cx = rand.Next(6, w - 6);
+            int cy = rand.Next(5, h - 5);
+            if (DistanceTiles(cx, cy, 12, h / 2) < 10) continue;
+            int radius = rand.Next(1, 3);
+            for (int yy = cy - radius; yy <= cy + radius; yy++)
+            for (int xx = cx - radius; xx <= cx + radius; xx++)
             {
-                map.Tiles[x, y] = TileKind.Rock;
-                map.TextureKeys[x, y] = "tile_" + (7 + rand.Next(0, 5));
+                if (!map.IsInsideTile(xx, yy)) continue;
+                if (map.Tiles[xx, yy] != TileKind.Sand) continue;
+                if (rand.NextDouble() < 0.42) SetTile(map, xx, yy, TileKind.Rock, "terrain_rock");
             }
         }
 
-        var propKeys = new[] { "prop_1", "prop_2", "prop_3", "prop_4", "prop_10", "prop_15", "prop_16", "prop_17", "prop_20", "decor_6", "decor_7" };
-        for (int i = 0; i < 190; i++)
-        {
-            int tx = rand.Next(2, w - 3);
-            int ty = rand.Next(2, h - 3);
-            if (map.Tiles[tx, ty] == TileKind.Water || map.Tiles[tx, ty] == TileKind.Road) continue;
-            bool block = rand.NextDouble() < 0.34;
-            map.Props.Add(new MapProp
-            {
-                TextureKey = propKeys[rand.Next(propKeys.Length)],
-                Position = new Vector2((tx + 0.5f) * map.TileSize + rand.Next(-18, 19), (ty + 0.5f) * map.TileSize + rand.Next(-18, 19)),
-                Scale = (float)(0.22 + rand.NextDouble() * 0.24),
-                Rotation = (float)(rand.NextDouble() * MathHelper.TwoPi),
-                Blocks = block,
-                Radius = block ? rand.Next(42, 86) : 0f
-            });
-        }
-
+        // Spawn areas must be clean and readable.
         map.EnemySpawns.Add(new Vector2((w - 8) * 96, 8 * 96));
         map.EnemySpawns.Add(new Vector2((w - 9) * 96, (h - 8) * 96));
-        map.EnemySpawns.Add(new Vector2((w / 2 + 12) * 96, 7 * 96));
+        map.EnemySpawns.Add(new Vector2((w / 2 + 13) * 96, 8 * 96));
         map.EnemySpawns.Add(new Vector2((w / 2 + 16) * 96, (h - 8) * 96));
-        map.AllySpawns.Add(new Vector2(13 * 96, 8 * 96));
-        map.AllySpawns.Add(new Vector2(13 * 96, (h - 8) * 96));
+        map.AllySpawns.Add(new Vector2(14 * 96, 8 * 96));
+        map.AllySpawns.Add(new Vector2(14 * 96, (h - 8) * 96));
         map.AllySpawns.Add(new Vector2(23 * 96, (h / 2 + 12) * 96));
+
+        ClearSpawnArea(map, map.PlayerSpawn, 5);
+        foreach (var p in map.EnemySpawns) ClearSpawnArea(map, p, 4);
+        foreach (var p in map.AllySpawns) ClearSpawnArea(map, p, 3);
+
+        AddProps(map, rand);
         return map;
+    }
+
+    private static void SetTile(GameMap map, int x, int y, TileKind kind, string key)
+    {
+        if (!map.IsInsideTile(x, y)) return;
+        map.Tiles[x, y] = kind;
+        map.TextureKeys[x, y] = key;
+    }
+
+    private static float DistanceTiles(int x0, int y0, int x1, int y1)
+    {
+        float dx = x0 - x1;
+        float dy = y0 - y1;
+        return MathF.Sqrt(dx * dx + dy * dy);
     }
 
     private static void DrawRoad(GameMap map, Point a, Point b, int radius)
@@ -154,13 +161,15 @@ public sealed class GameMap
         {
             float t = steps == 0 ? 0 : i / (float)steps;
             int cx = (int)MathHelper.Lerp(a.X, b.X, t);
-            int cy = (int)MathHelper.Lerp(a.Y, b.Y, t + MathF.Sin(t * MathHelper.Pi * 3) * 0.03f);
+            int cy = (int)MathHelper.Lerp(a.Y, b.Y, t + MathF.Sin(t * MathHelper.Pi * 2.5f) * 0.025f);
             for (int y = cy - radius; y <= cy + radius; y++)
             for (int x = cx - radius; x <= cx + radius; x++)
             {
                 if (!map.IsInsideTile(x, y)) continue;
-                map.Tiles[x, y] = TileKind.Road;
-                map.TextureKeys[x, y] = "road_18";
+                if (map.Tiles[x, y] != TileKind.Water)
+                {
+                    SetTile(map, x, y, TileKind.Road, "terrain_road");
+                }
             }
         }
     }
@@ -175,8 +184,7 @@ public sealed class GameMap
             float dy = (y - center.Y) / (float)ry;
             if (dx * dx + dy * dy < 1.0f)
             {
-                map.Tiles[x, y] = TileKind.Water;
-                map.TextureKeys[x, y] = "lake";
+                SetTile(map, x, y, TileKind.Water, "terrain_water");
             }
         }
     }
@@ -187,10 +195,57 @@ public sealed class GameMap
         {
             for (int xx = x - 2; xx <= x + 2; xx++)
             {
-                if (!map.IsInsideTile(xx, y)) continue;
-                map.Tiles[xx, y] = TileKind.Rock;
-                map.TextureKeys[xx, y] = "tile_8";
+                SetTile(map, xx, y, TileKind.Rock, "terrain_rock");
             }
+        }
+    }
+
+    private static void CarvePass(GameMap map, int x, int y, int radius)
+    {
+        for (int yy = y - radius; yy <= y + radius; yy++)
+        for (int xx = x - 3; xx <= x + 3; xx++)
+        {
+            if (map.IsInsideTile(xx, yy)) SetTile(map, xx, yy, TileKind.Road, "terrain_road");
+        }
+    }
+
+    private static void ClearSpawnArea(GameMap map, Vector2 spawn, int radius)
+    {
+        int cx = (int)(spawn.X / map.TileSize);
+        int cy = (int)(spawn.Y / map.TileSize);
+        for (int y = cy - radius; y <= cy + radius; y++)
+        for (int x = cx - radius; x <= cx + radius; x++)
+        {
+            if (!map.IsInsideTile(x, y)) continue;
+            if (map.Tiles[x, y] != TileKind.Water)
+            {
+                SetTile(map, x, y, TileKind.Sand, $"terrain_sand_{Math.Abs(x * 7 + y * 13) % 4}");
+            }
+        }
+    }
+
+    private static void AddProps(GameMap map, Random rand)
+    {
+        var propKeys = new[] { "prop_1", "prop_2", "prop_3", "prop_4", "prop_10", "prop_15", "prop_16", "prop_17", "prop_20", "decor_6", "decor_7" };
+        int desired = 92;
+        int guard = 0;
+        while (map.Props.Count < desired && guard++ < desired * 10)
+        {
+            int tx = rand.Next(2, map.Width - 3);
+            int ty = rand.Next(2, map.Height - 3);
+            if (map.Tiles[tx, ty] == TileKind.Water || map.Tiles[tx, ty] == TileKind.Road) continue;
+            var position = new Vector2((tx + 0.5f) * map.TileSize + rand.Next(-18, 19), (ty + 0.5f) * map.TileSize + rand.Next(-18, 19));
+            if (Vector2.Distance(position, map.PlayerSpawn) < 850) continue;
+            bool block = rand.NextDouble() < 0.15;
+            map.Props.Add(new MapProp
+            {
+                TextureKey = propKeys[rand.Next(propKeys.Length)],
+                Position = position,
+                Scale = (float)(0.18 + rand.NextDouble() * 0.22),
+                Rotation = (float)(rand.NextDouble() * MathHelper.TwoPi),
+                Blocks = block,
+                Radius = block ? rand.Next(38, 72) : 0f
+            });
         }
     }
 }

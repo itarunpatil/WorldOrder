@@ -42,17 +42,17 @@ jobs:
             -f net8.0-android34.0 \
             -c Release \
             -p:AndroidKeyStore=true \
-            -p:AndroidSigningKeyStore=../../build/signing/worldorder.keystore \
+            -p:AndroidSigningKeyStore=${{ github.workspace }}/build/signing/worldorder.keystore \
             -p:AndroidSigningKeyAlias=worldorder \
             -p:AndroidSigningKeyPass=worldorder \
             -p:AndroidSigningStorePass=worldorder \
             -p:AndroidPackageFormats=apk \
-            -p:AndroidCreatePackagePerAbi=false \
             -p:ApplicationVersion=${{ github.run_number }}
           mkdir -p artifacts/android
           short_sha="$(echo "${{ github.sha }}" | cut -c1-12)"
-          signed_apk="$(find src/WorldOrder.Android/bin/Release -name '*-signed.apk' | head -n 1)"
-          if [ -z "$signed_apk" ]; then signed_apk="$(find src/WorldOrder.Android/bin/Release -name '*.apk' | head -n 1)"; fi
+          signed_apk="$(find src/WorldOrder.Android/bin/Release -iname '*signed*.apk' | head -n 1 || true)"
+          if [ -z "$signed_apk" ]; then signed_apk="$(find src/WorldOrder.Android/bin/Release -iname '*.apk' | head -n 1 || true)"; fi
+          if [ -z "$signed_apk" ]; then echo "No APK produced" >&2; exit 1; fi
           cp "$signed_apk" "artifacts/android/WorldOrder-${short_sha}-android-universal-signed.apk"
           sha256sum "artifacts/android/WorldOrder-${short_sha}-android-universal-signed.apk" > "artifacts/android/WorldOrder-${short_sha}-android-universal-signed.apk.sha256"
 
