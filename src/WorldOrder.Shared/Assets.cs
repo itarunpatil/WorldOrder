@@ -21,7 +21,8 @@ public sealed class AssetBank : IDisposable
         Pixel = new Texture2D(_graphics, 1, 1);
         Pixel.SetData(new[] { Color.White });
         _textures["pixel"] = Pixel;
-        Load("font_hud", "Content/Fonts/hud_font.png");
+        Load("font_ui", "Content/Fonts/ui_font.png");
+        LoadOptional("font_hud", "Content/Fonts/hud_font.png");
         Load("selection_ring", "Content/Assets/UI/selection_ring.png");
         Load("attack_reticle", "Content/Assets/UI/attack_reticle.png");
 
@@ -41,6 +42,7 @@ public sealed class AssetBank : IDisposable
         Load("terrain_road", "Content/Assets/Terrain/generated_road.png");
         Load("terrain_rock", "Content/Assets/Terrain/generated_rock.png");
         Load("terrain_water", "Content/Assets/Terrain/generated_water.png");
+        Load("terrain_resource_spice", "Content/Assets/Terrain/generated_resource_spice.png");
         for (int i = 1; i <= 17; i++) Load($"tile_{i}", $"Content/Assets/Terrain/tile_{i}.png");
         for (int i = 1; i <= 26; i++) LoadOptional($"road_{i}", $"Content/Assets/Terrain/rpg_road_{i}.png");
         LoadOptional("lake", "Content/Assets/Terrain/rpg_lake.png");

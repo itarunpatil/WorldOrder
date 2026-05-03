@@ -19,6 +19,7 @@ public enum UnitKind
     CommandCenter,
     LightTank,
     HeavyTank,
+    Harvester,
     ScoutBoat
 }
 
@@ -32,7 +33,12 @@ public sealed class Unit
     public Vector2 Position;
     public Vector2 Velocity;
     public Vector2? MoveTarget;
+    public Queue<Vector2> Path { get; } = new();
     public Unit? AttackTarget;
+    public ResourceNode? HarvestTarget;
+    public int Cargo;
+    public int CargoCapacity { get; init; } = 80;
+    public float HarvestTimer;
     public float Rotation;
     public float TurretRotation;
     public float Radius { get; init; } = 34f;
@@ -46,6 +52,7 @@ public sealed class Unit
     public bool Selected;
     public bool Naval => Kind == UnitKind.ScoutBoat;
     public bool Structure => Kind == UnitKind.CommandCenter;
+    public bool Worker => Kind == UnitKind.Harvester;
     public string HullKey { get; init; } = "hull_player_01";
     public string GunKey { get; init; } = "gun_player_01";
     public string BoatKey { get; init; } = "boat_water_1_1_1";
@@ -96,6 +103,8 @@ public sealed class RtsSession
     public List<Projectile> Projectiles { get; } = new();
     public List<Particle> Particles { get; } = new();
     public int Supplies { get; private set; } = 420;
+    public bool[,] VisibleTiles { get; }
+    public bool[,] ExploredTiles { get; }
     public string Objective { get; private set; } = "Destroy enemy command centers";
     public bool Victory { get; private set; }
     public bool Defeat { get; private set; }
@@ -106,6 +115,8 @@ public sealed class RtsSession
         Settings = settings;
         Map = map;
         _random = new Random(settings.Seed ^ 0x51C0FFEE);
+        VisibleTiles = new bool[map.Width, map.Height];
+        ExploredTiles = new bool[map.Width, map.Height];
     }
 
     public static RtsSession Create(Game1 game, WorldSettings settings)
@@ -120,6 +131,7 @@ public sealed class RtsSession
     {
         AddCommandCenter(FactionKind.Player, 0, Map.PlayerSpawn);
         for (int i = 0; i < 5; i++) AddTank(FactionKind.Player, 0, Map.PlayerSpawn + new Vector2(150 + i * 60, -120 + i * 42), i % 2 == 0 ? UnitKind.LightTank : UnitKind.HeavyTank);
+        AddTank(FactionKind.Player, 0, Map.PlayerSpawn + new Vector2(110, 170), UnitKind.Harvester);
         AddBoat(FactionKind.Player, 0, FindNearestWater(Map.PlayerSpawn + new Vector2(1500, 0)));
 
         for (int i = 0; i < Settings.EnemyFactions; i++)
@@ -139,6 +151,7 @@ public sealed class RtsSession
             AddCommandCenter(FactionKind.Ally, 50 + i, spawn);
             for (int j = 0; j < 3; j++) AddTank(FactionKind.Ally, 50 + i, spawn + Scatter(220), UnitKind.LightTank);
         }
+        UpdateVisibility();
     }
 
     public Unit AddCommandCenter(FactionKind faction, int team, Vector2 position)
@@ -175,13 +188,14 @@ public sealed class RtsSession
             Faction = faction,
             Team = team,
             Position = ClampToPassable(position, false),
-            Radius = kind == UnitKind.HeavyTank ? 42f : 35f,
-            Speed = kind == UnitKind.HeavyTank ? 124f : 168f,
-            Range = kind == UnitKind.HeavyTank ? 480f : 400f,
-            ReloadMax = kind == UnitKind.HeavyTank ? 1.38f : 0.96f,
-            Damage = kind == UnitKind.HeavyTank ? 42 : 25,
-            MaxHealth = kind == UnitKind.HeavyTank ? 190f : 120f,
-            Health = kind == UnitKind.HeavyTank ? 190f : 120f,
+            Radius = kind == UnitKind.HeavyTank ? 42f : kind == UnitKind.Harvester ? 38f : 35f,
+            Speed = kind == UnitKind.HeavyTank ? 124f : kind == UnitKind.Harvester ? 142f : 168f,
+            Range = kind == UnitKind.HeavyTank ? 480f : kind == UnitKind.Harvester ? 260f : 400f,
+            ReloadMax = kind == UnitKind.HeavyTank ? 1.38f : kind == UnitKind.Harvester ? 1.6f : 0.96f,
+            Damage = kind == UnitKind.HeavyTank ? 42 : kind == UnitKind.Harvester ? 11 : 25,
+            MaxHealth = kind == UnitKind.HeavyTank ? 190f : kind == UnitKind.Harvester ? 145f : 120f,
+            Health = kind == UnitKind.HeavyTank ? 190f : kind == UnitKind.Harvester ? 145f : 120f,
+            CargoCapacity = kind == UnitKind.Harvester ? 90 : 0,
             HullKey = $"hull_{color}_{hull}",
             GunKey = $"gun_{color}_{gun}"
         };
@@ -289,6 +303,7 @@ public sealed class RtsSession
             if (Particles[i].Age > Particles[i].Duration) Particles.RemoveAt(i);
         }
         Units.RemoveAll(u => !u.Alive);
+        UpdateVisibility();
         Victory = Units.All(u => u.Faction != FactionKind.Enemy || u.Kind != UnitKind.CommandCenter);
         Defeat = Units.All(u => u.Faction != FactionKind.Player || u.Kind != UnitKind.CommandCenter);
     }
@@ -298,7 +313,8 @@ public sealed class RtsSession
         u.Reload = MathEx.Approach(u.Reload, 0f, dt);
         u.SpawnCooldown = MathEx.Approach(u.SpawnCooldown, 0f, dt);
         if (u.AttackTarget is { Alive: false }) u.AttackTarget = null;
-        if (u.AttackTarget == null) u.AttackTarget = FindNearestEnemy(u, u.Range * 0.92f);
+        if (u.Worker && UpdateHarvester(u, dt)) return;
+        if (!u.Worker && u.AttackTarget == null) u.AttackTarget = FindNearestEnemy(u, u.Range * 0.92f);
         if (u.AttackTarget != null)
         {
             u.TurretRotation = MathEx.Angle(u.Position, u.AttackTarget.Position);
@@ -310,7 +326,10 @@ public sealed class RtsSession
             }
             else if (!u.Structure && d > u.Range * 0.78f)
             {
-                u.MoveTarget = u.AttackTarget.Position;
+                if (!u.MoveTarget.HasValue || Vector2.DistanceSquared(u.MoveTarget.Value, u.AttackTarget.Position) > 160f * 160f)
+                {
+                    SetMoveOrder(u, u.AttackTarget.Position, keepAttackTarget: true);
+                }
             }
         }
 
@@ -321,8 +340,15 @@ public sealed class RtsSession
             var delta = target - u.Position;
             if (delta.LengthSquared() < 26f * 26f)
             {
-                u.MoveTarget = null;
-                u.Velocity = Vector2.Zero;
+                if (u.Path.Count > 0)
+                {
+                    u.MoveTarget = u.Path.Dequeue();
+                }
+                else
+                {
+                    u.MoveTarget = null;
+                    u.Velocity = Vector2.Zero;
+                }
             }
             else
             {
@@ -362,6 +388,123 @@ public sealed class RtsSession
         else
         {
             u.Velocity *= 0.82f;
+        }
+    }
+
+    private void SetMoveOrder(Unit unit, Vector2 target, bool keepAttackTarget)
+    {
+        if (unit.Structure) return;
+        if (!keepAttackTarget) unit.AttackTarget = null;
+        var finalTarget = ClampToPassable(target, unit.Naval);
+        var path = Map.FindPath(unit.Position, finalTarget, unit.Naval);
+        unit.Path.Clear();
+        foreach (var waypoint in path)
+        {
+            if (Vector2.DistanceSquared(waypoint, unit.Position) > 18f * 18f)
+            {
+                unit.Path.Enqueue(waypoint);
+            }
+        }
+        unit.MoveTarget = unit.Path.Count > 0 ? unit.Path.Dequeue() : finalTarget;
+    }
+
+    private bool UpdateHarvester(Unit unit, float dt)
+    {
+        if (unit.AttackTarget != null) return false;
+
+        var baseUnit = Units
+            .Where(u => u.Alive && u.Faction == unit.Faction && u.Kind == UnitKind.CommandCenter)
+            .OrderBy(u => Vector2.DistanceSquared(u.Position, unit.Position))
+            .FirstOrDefault();
+
+        if (unit.Cargo >= unit.CargoCapacity)
+        {
+            if (baseUnit == null) return true;
+            float distanceToBase = Vector2.Distance(unit.Position, baseUnit.Position);
+            if (distanceToBase <= baseUnit.Radius + unit.Radius + 42f)
+            {
+                if (unit.Faction == FactionKind.Player) Supplies += unit.Cargo;
+                unit.Cargo = 0;
+                unit.MoveTarget = null;
+                unit.Path.Clear();
+            }
+            else if (!unit.MoveTarget.HasValue || Vector2.DistanceSquared(unit.MoveTarget.Value, baseUnit.Position) > 150f * 150f)
+            {
+                SetMoveOrder(unit, baseUnit.Position + Scatter(90f), keepAttackTarget: false);
+                return false;
+            }
+            return true;
+        }
+
+        if (unit.HarvestTarget == null || unit.HarvestTarget.Depleted)
+        {
+            unit.HarvestTarget = Map.ResourceNodes
+                .Where(n => !n.Depleted)
+                .OrderBy(n => Vector2.DistanceSquared(n.Position, unit.Position))
+                .FirstOrDefault();
+        }
+
+        if (unit.HarvestTarget == null) return false;
+
+        float distanceToNode = Vector2.Distance(unit.Position, unit.HarvestTarget.Position);
+        if (distanceToNode <= unit.HarvestTarget.Radius + unit.Radius + 8f)
+        {
+            unit.MoveTarget = null;
+            unit.Path.Clear();
+            unit.Velocity *= 0.72f;
+            unit.HarvestTimer += dt;
+            if (unit.HarvestTimer >= 0.22f)
+            {
+                unit.HarvestTimer = 0f;
+                int taken = Math.Min(4, unit.HarvestTarget.Amount);
+                unit.HarvestTarget.Amount -= taken;
+                unit.Cargo += taken;
+            }
+        }
+        else if (!unit.MoveTarget.HasValue || Vector2.DistanceSquared(unit.MoveTarget.Value, unit.HarvestTarget.Position) > 150f * 150f)
+        {
+            SetMoveOrder(unit, unit.HarvestTarget.Position, keepAttackTarget: false);
+            return false;
+        }
+
+        return true;
+    }
+
+    public bool IsVisibleWorld(Vector2 world)
+    {
+        var tile = Map.WorldToTile(world);
+        return Map.IsInsideTile(tile.X, tile.Y) && VisibleTiles[tile.X, tile.Y];
+    }
+
+    public bool IsExploredWorld(Vector2 world)
+    {
+        var tile = Map.WorldToTile(world);
+        return Map.IsInsideTile(tile.X, tile.Y) && ExploredTiles[tile.X, tile.Y];
+    }
+
+    private void UpdateVisibility()
+    {
+        for (int y = 0; y < Map.Height; y++)
+        for (int x = 0; x < Map.Width; x++)
+        {
+            VisibleTiles[x, y] = false;
+        }
+
+        foreach (var unit in Units)
+        {
+            if (!unit.Alive || (unit.Faction != FactionKind.Player && unit.Faction != FactionKind.Ally)) continue;
+            int radius = unit.Structure ? 8 : unit.Worker ? 6 : 7;
+            var center = Map.WorldToTile(unit.Position);
+            for (int y = center.Y - radius; y <= center.Y + radius; y++)
+            for (int x = center.X - radius; x <= center.X + radius; x++)
+            {
+                if (!Map.IsInsideTile(x, y)) continue;
+                float dx = x - center.X;
+                float dy = y - center.Y;
+                if (dx * dx + dy * dy > radius * radius) continue;
+                VisibleTiles[x, y] = true;
+                ExploredTiles[x, y] = true;
+            }
         }
     }
 
@@ -450,7 +593,7 @@ public sealed class RtsSession
             if (target != null && (unit.MoveTarget == null || _wave % 3 == 0))
             {
                 unit.AttackTarget = target;
-                unit.MoveTarget = target.Position + Scatter(180);
+                SetMoveOrder(unit, target.Position + Scatter(180), keepAttackTarget: true);
             }
         }
 
@@ -460,7 +603,7 @@ public sealed class RtsSession
             if (enemy != null)
             {
                 ally.AttackTarget = enemy;
-                ally.MoveTarget = enemy.Position + Scatter(120);
+                SetMoveOrder(ally, enemy.Position + Scatter(120), keepAttackTarget: true);
             }
         }
     }
@@ -470,8 +613,7 @@ public sealed class RtsSession
         int i = 0;
         foreach (var u in selected.Where(u => u.Alive && u.Faction == FactionKind.Player && !u.Structure))
         {
-            u.AttackTarget = null;
-            u.MoveTarget = ClampToPassable(target + FormationOffset(i++), u.Naval);
+            SetMoveOrder(u, target + FormationOffset(i++), keepAttackTarget: false);
         }
     }
 
@@ -481,7 +623,7 @@ public sealed class RtsSession
         foreach (var u in selected.Where(u => u.Alive && u.Faction == FactionKind.Player))
         {
             u.AttackTarget = target;
-            if (!u.Structure) u.MoveTarget = ClampToPassable(target.Position + FormationOffset(i++), u.Naval);
+            if (!u.Structure) SetMoveOrder(u, target.Position + FormationOffset(i++), keepAttackTarget: true);
         }
     }
 
@@ -494,7 +636,7 @@ public sealed class RtsSession
 
     public bool TryBuildTank(UnitKind kind)
     {
-        int cost = kind == UnitKind.HeavyTank ? 280 : 170;
+        int cost = kind == UnitKind.HeavyTank ? 280 : kind == UnitKind.Harvester ? 140 : 170;
         if (Supplies < cost) return false;
         var baseUnit = Units.FirstOrDefault(u => u.Alive && u.Faction == FactionKind.Player && u.Kind == UnitKind.CommandCenter);
         if (baseUnit == null) return false;

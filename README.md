@@ -1,19 +1,21 @@
 # World Order
 
-World Order is a Phase 1 top-down 2D RTS built with C# and MonoGame. The goal of this repository is to be a real playable foundation for a long-running RTS project: menus, world creation, loading, preset map generation, unit selection, orders, faction AI, combat, projectiles, explosions, minimap, economy and Windows/Android build automation are included.
+World Order is a Phase 2 top-down 2D RTS built with C# and MonoGame. The goal of this repository is to be a real playable foundation for a long-running RTS project: menus, world creation, loading, preset map generation, unit selection, touch-safe orders, faction AI, A* pathfinding, fog of war, harvesters, resource fields, combat, projectiles, explosions, minimap, economy and Windows/Android build automation are included.
 
-## Phase 1 gameplay
+## Phase 2 gameplay
 
 Start the game, select **Play**, create a world, choose map preset/difficulty/enemy factions/allies, wait for the loading screen, then enter the tactical map.
 
 Current playable loop:
 
-- Player command center generates supplies.
-- Build light and heavy tanks from the bottom command bar.
+- Player command center generates baseline supplies.
+- Spice fields now spawn on the map; harvesters mine them automatically and return cargo to command centers.
+- Build light tanks, heavy tanks and harvesters from the bottom command bar.
 - Select units with left drag on Windows, then right-click to move or attack.
 - On Android, tap a player unit to select, then tap ground to move or tap an enemy to attack.
-- Enemy factions spawn tanks from their command centers and attack player/ally forces.
+- Enemy factions spawn tanks from their command centers and use pathing to attack player/ally forces.
 - Ally factions patrol and attack enemies.
+- Fog of war hides unexplored terrain and enemy units outside vision.
 - Win by destroying all enemy command centers.
 - Lose if your command center is destroyed.
 
@@ -30,8 +32,8 @@ Desktop:
 
 Android:
 
-- Tap a player unit to select.
-- Tap destination to move selected units.
+- Tap a player unit or button to select/activate it.
+- Tap destination to move selected units. Android touch release coordinates are preserved so menu and HUD buttons register reliably.
 - Tap an enemy to order selected units to attack.
 - Drag/tap near screen edges to pan.
 
@@ -103,8 +105,8 @@ Assets are redistributed as game content for this private development build. Kee
 
 - Tank sprites, tank weapons, effects, boats and RPG desert objects: CraftPix free asset packs. License file in source packs points to CraftPix file licenses.
 - Free Desert Top-Down Tileset: Franco Giachetti / LudicArts.com, Creative Commons Attribution 3.0 International.
-- Bitmap UI font atlas generated as a raster PNG for this project. No font files are included.
+- Bitmap UI font atlas generated as a raster PNG from a system font for this project. No font files are included.
 
 ## Production notes
 
-This Phase 1 avoids MonoGame Content Builder/XNB dependencies by loading raw PNGs with `Texture2D.FromStream`. That keeps the build simple for CI and Android asset packaging. Later phases can move large assets into a formal content pipeline once animations, audio, localization and streaming are finalized.
+This Phase 2 still avoids MonoGame Content Builder/XNB dependencies by loading raw PNGs with `Texture2D.FromStream`. That keeps the build simple for CI and Android asset packaging. Later phases can move large assets into a formal content pipeline once animations, audio, localization and streaming are finalized.

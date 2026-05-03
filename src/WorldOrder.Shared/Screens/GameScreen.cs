@@ -69,22 +69,29 @@ public sealed class GameScreen : IGameScreen
     private static Rectangle LightButton(Viewport vp)
     {
         var bar = BottomBar(vp);
-        int w = Math.Clamp((vp.Width - 720) / 5 + 150, 132, 180);
+        int w = Math.Clamp(vp.Width / 9, 112, 156);
         return new Rectangle(22, bar.Y + 20, w, 54);
     }
 
     private static Rectangle HeavyButton(Viewport vp)
     {
         var first = LightButton(vp);
-        int w = Math.Clamp(first.Width + 8, 140, 188);
+        int w = Math.Clamp(first.Width + 4, 116, 162);
         return new Rectangle(first.Right + 12, first.Y, w, first.Height);
+    }
+
+    private static Rectangle HarvesterButton(Viewport vp)
+    {
+        var second = HeavyButton(vp);
+        int w = Math.Clamp(second.Width + 4, 118, 166);
+        return new Rectangle(second.Right + 12, second.Y, w, second.Height);
     }
 
     private static Rectangle CenterButton(Viewport vp)
     {
-        var second = HeavyButton(vp);
-        int w = Math.Clamp(second.Width + 8, 150, 196);
-        return new Rectangle(second.Right + 12, second.Y, w, second.Height);
+        var third = HarvesterButton(vp);
+        int w = Math.Clamp(third.Width + 4, 120, 168);
+        return new Rectangle(third.Right + 12, third.Y, w, third.Height);
     }
 
     private static Rectangle BackButton(Viewport vp)
@@ -150,6 +157,7 @@ public sealed class GameScreen : IGameScreen
         var vp = _game.GraphicsDevice.Viewport;
         var lightButton = LightButton(vp);
         var heavyButton = HeavyButton(vp);
+        var harvesterButton = HarvesterButton(vp);
         var centerButton = CenterButton(vp);
         var backButton = BackButton(vp);
         if (lightButton.Contains(input.Pointer) && input.PointerReleased)
@@ -162,6 +170,12 @@ public sealed class GameScreen : IGameScreen
         {
             if (!_session.TryBuildTank(UnitKind.HeavyTank)) ShowToast("Need 280 supplies and an active command center");
             else ShowToast("Heavy tank rolled out");
+            return;
+        }
+        if (harvesterButton.Contains(input.Pointer) && input.PointerReleased)
+        {
+            if (!_session.TryBuildTank(UnitKind.Harvester)) ShowToast("Need 140 supplies and an active command center");
+            else ShowToast("Harvester deployed. It will mine spice automatically.");
             return;
         }
         if (centerButton.Contains(input.Pointer) && input.PointerReleased)
@@ -259,7 +273,8 @@ public sealed class GameScreen : IGameScreen
 
     private Unit? UnitAt(Vector2 world)
     {
-        return _session.Units.Where(u => u.Alive)
+        return _session.Units
+            .Where(u => u.Alive && (u.Faction != FactionKind.Enemy || _session.IsVisibleWorld(u.Position)))
             .OrderBy(u => Vector2.DistanceSquared(u.Position, world))
             .FirstOrDefault(u => Vector2.DistanceSquared(u.Position, world) <= (u.Radius + 16f) * (u.Radius + 16f));
     }
@@ -298,15 +313,17 @@ public sealed class GameScreen : IGameScreen
         var matrix = CameraMatrix();
         batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone, null, matrix);
         DrawMap(batch);
+        DrawResources(batch);
         DrawProps(batch);
         DrawProjectiles(batch);
         DrawUnits(time, batch);
         DrawParticles(batch);
+        DrawFog(batch);
         batch.End();
 
         if (_draggingSelection)
         {
-            batch.Begin(samplerState: SamplerState.PointClamp);
+            batch.Begin(samplerState: SamplerState.LinearClamp);
             var r = MathEx.RectFromPoints(_selectStart, _selectEnd);
             UiKit.Fill(batch, _game.Pixel, r, new Color(80, 180, 115, 35));
             UiKit.Outline(batch, _game.Pixel, r, new Color(125, 225, 145, 220), 2);
@@ -342,6 +359,19 @@ public sealed class GameScreen : IGameScreen
         }
     }
 
+    private void DrawResources(SpriteBatch batch)
+    {
+        var tex = _game.Assets.Get("terrain_resource_spice");
+        foreach (var node in _session.Map.ResourceNodes)
+        {
+            if (!_session.IsExploredWorld(node.Position)) continue;
+            float fullness = node.MaxAmount <= 0 ? 0f : MathHelper.Clamp(node.Amount / (float)node.MaxAmount, 0f, 1f);
+            if (fullness <= 0.02f) continue;
+            var tint = _session.IsVisibleWorld(node.Position) ? Color.White : Color.White * 0.42f;
+            batch.Draw(tex, node.Position, null, tint * MathHelper.Lerp(0.45f, 0.95f, fullness), 0f, new Vector2(tex.Width / 2f, tex.Height / 2f), node.Radius / 72f, SpriteEffects.None, 0f);
+        }
+    }
+
     private void DrawProps(SpriteBatch batch)
     {
         foreach (var prop in _session.Map.Props)
@@ -357,6 +387,7 @@ public sealed class GameScreen : IGameScreen
         foreach (var u in _session.Units.OrderBy(u => u.Position.Y))
         {
             if (!u.Alive) continue;
+            if ((u.Faction == FactionKind.Enemy || u.Faction == FactionKind.Neutral) && !_session.IsVisibleWorld(u.Position)) continue;
             var shadow = new Rectangle((int)(u.Position.X - u.Radius), (int)(u.Position.Y + u.Radius * 0.45f), (int)(u.Radius * 2), (int)(u.Radius * 0.55f));
             UiKit.Fill(batch, _game.Pixel, shadow, new Color(0, 0, 0, 64));
             if (u.Selected)
@@ -392,6 +423,13 @@ public sealed class GameScreen : IGameScreen
         var fg = new Rectangle(bg.X + 1, bg.Y + 1, (int)((w - 2) * MathEx.Clamp01(u.Health / u.MaxHealth)), 6);
         Color c = u.Faction == FactionKind.Enemy ? UiKit.Red : u.Faction == FactionKind.Ally ? new Color(79, 198, 202) : UiKit.Green;
         UiKit.Fill(batch, _game.Pixel, fg, c);
+        if (u.Worker && u.CargoCapacity > 0)
+        {
+            var cargoBg = new Rectangle(bg.X, bg.Bottom + 2, bg.Width, 5);
+            UiKit.Fill(batch, _game.Pixel, cargoBg, new Color(30, 23, 16, 200));
+            var cargo = new Rectangle(cargoBg.X + 1, cargoBg.Y + 1, (int)((cargoBg.Width - 2) * MathEx.Clamp01(u.Cargo / (float)u.CargoCapacity)), 3);
+            UiKit.Fill(batch, _game.Pixel, cargo, new Color(238, 173, 59));
+        }
     }
 
     private void DrawProjectiles(SpriteBatch batch)
@@ -424,12 +462,30 @@ public sealed class GameScreen : IGameScreen
         }
     }
 
+    private void DrawFog(SpriteBatch batch)
+    {
+        var vp = _game.GraphicsDevice.Viewport;
+        var tl = ScreenToWorld(Vector2.Zero);
+        var br = ScreenToWorld(new Vector2(vp.Width, vp.Height));
+        int tx0 = Math.Max(0, (int)(tl.X / _session.Map.TileSize) - 2);
+        int ty0 = Math.Max(0, (int)(tl.Y / _session.Map.TileSize) - 2);
+        int tx1 = Math.Min(_session.Map.Width - 1, (int)(br.X / _session.Map.TileSize) + 2);
+        int ty1 = Math.Min(_session.Map.Height - 1, (int)(br.Y / _session.Map.TileSize) + 2);
+        for (int y = ty0; y <= ty1; y++)
+        for (int x = tx0; x <= tx1; x++)
+        {
+            if (_session.VisibleTiles[x, y]) continue;
+            int alpha = _session.ExploredTiles[x, y] ? 108 : 218;
+            UiKit.Fill(batch, _game.Pixel, new Rectangle(x * _session.Map.TileSize, y * _session.Map.TileSize, _session.Map.TileSize, _session.Map.TileSize), new Color(0, 0, 0, alpha));
+        }
+    }
+
     private void DrawUi(GameTime time, SpriteBatch batch)
     {
         var vp = _game.GraphicsDevice.Viewport;
         var top = TopBar(vp);
         var bottom = BottomBar(vp);
-        batch.Begin(samplerState: SamplerState.PointClamp);
+        batch.Begin(samplerState: SamplerState.LinearClamp);
 
         UiKit.Fill(batch, _game.Pixel, top, new Color(31, 25, 20, 246));
         UiKit.Fill(batch, _game.Pixel, new Rectangle(0, top.Bottom - 4, vp.Width, 4), UiKit.Accent);
@@ -443,11 +499,13 @@ public sealed class GameScreen : IGameScreen
         UiKit.Fill(batch, _game.Pixel, new Rectangle(0, bottom.Y, vp.Width, 4), UiKit.Accent);
         var lightButton = LightButton(vp);
         var heavyButton = HeavyButton(vp);
+        var harvesterButton = HarvesterButton(vp);
         var centerButton = CenterButton(vp);
         var backButton = BackButton(vp);
-        UiKit.Button(_game, batch, _lastInput, lightButton, "BUILD LT 170", true, 0.52f);
-        UiKit.Button(_game, batch, _lastInput, heavyButton, "BUILD HT 280", true, 0.52f);
-        UiKit.Button(_game, batch, _lastInput, centerButton, "CENTER BASE", true, 0.52f);
+        UiKit.Button(_game, batch, _lastInput, lightButton, "LIGHT 170", true, 0.50f);
+        UiKit.Button(_game, batch, _lastInput, heavyButton, "HEAVY 280", true, 0.50f);
+        UiKit.Button(_game, batch, _lastInput, harvesterButton, "MINE 140", true, 0.50f);
+        UiKit.Button(_game, batch, _lastInput, centerButton, "CENTER", true, 0.50f);
         UiKit.Button(_game, batch, _lastInput, backButton, "EXIT", true, 0.58f);
 
         int textX = centerButton.Right + 22;
@@ -456,7 +514,7 @@ public sealed class GameScreen : IGameScreen
         if (textWidth > 180)
         {
             UiKit.DrawFitted(_game, batch, _selected.Count == 0 ? "No selection" : $"Selected: {_selected.Count} unit(s)", new Vector2(textX, bottom.Y + 24), UiKit.Ink, 0.58f, textWidth);
-            UiKit.DrawFitted(_game, batch, _game.IsMobile ? "Tap selected unit, then tap destination or target." : "Drag-select | Right-click move/attack | Wheel zoom | WASD pan", new Vector2(textX, bottom.Y + 58), UiKit.InkDim, 0.43f, textWidth);
+            UiKit.DrawFitted(_game, batch, _game.IsMobile ? "Tap unit, then tap ground or enemy. Harvesters mine automatically." : "Drag-select | Right-click move/attack | Wheel zoom | WASD pan | Harvesters mine automatically", new Vector2(textX, bottom.Y + 58), UiKit.InkDim, 0.43f, textWidth);
         }
 
         if (_hintTimer > 0f)
@@ -499,9 +557,17 @@ public sealed class GameScreen : IGameScreen
             };
             UiKit.Fill(batch, _game.Pixel, new Rectangle(r.X + (int)(x * sx), r.Y + (int)(y * sy), Math.Max(1, (int)(sx * 2)), Math.Max(1, (int)(sy * 2))), c);
         }
+        foreach (var node in _session.Map.ResourceNodes)
+        {
+            if (!_session.IsExploredWorld(node.Position) || node.Depleted) continue;
+            int x = r.X + (int)(node.Position.X / _session.Map.PixelWidth * r.Width);
+            int y = r.Y + (int)(node.Position.Y / _session.Map.PixelHeight * r.Height);
+            UiKit.Fill(batch, _game.Pixel, new Rectangle(x - 2, y - 2, 5, 5), new Color(238, 173, 59));
+        }
         foreach (var u in _session.Units)
         {
             if (!u.Alive) continue;
+            if (u.Faction == FactionKind.Enemy && !_session.IsVisibleWorld(u.Position)) continue;
             Color c = u.Faction == FactionKind.Enemy ? UiKit.Red : u.Faction == FactionKind.Ally ? new Color(78, 200, 212) : UiKit.Green;
             int x = r.X + (int)(u.Position.X / _session.Map.PixelWidth * r.Width);
             int y = r.Y + (int)(u.Position.Y / _session.Map.PixelHeight * r.Height);

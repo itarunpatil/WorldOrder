@@ -22,7 +22,7 @@ public abstract class MenuScreenBase : IGameScreen
     protected void DrawBackdrop(SpriteBatch batch)
     {
         var vp = Game.GraphicsDevice.Viewport;
-        batch.Begin(samplerState: SamplerState.PointClamp);
+        batch.Begin(samplerState: SamplerState.LinearClamp);
         var sand = Game.Assets.Get("terrain_sand_1");
         for (int y = -96; y < vp.Height + 96; y += 96)
         for (int x = -96; x < vp.Width + 96; x += 96)
@@ -78,11 +78,11 @@ public sealed class MainMenuScreen : MenuScreenBase
     {
         DrawBackdrop(batch);
         var vp = Game.GraphicsDevice.Viewport;
-        batch.Begin(samplerState: SamplerState.PointClamp);
+        batch.Begin(samplerState: SamplerState.LinearClamp);
         var panel = Panel(vp);
         UiKit.PanelBox(Game, batch, panel);
         UiKit.DrawCenteredFitted(Game, batch, "WORLD ORDER", new Rectangle(panel.X + 20, panel.Y + 54, panel.Width - 40, 62), UiKit.Ink, 1.55f);
-        UiKit.DrawCenteredFitted(Game, batch, "Phase 1 tactical desert campaign", new Rectangle(panel.X + 20, panel.Y + 120, panel.Width - 40, 38), UiKit.InkDim, 0.66f);
+        UiKit.DrawCenteredFitted(Game, batch, "Phase 2 desert command campaign", new Rectangle(panel.X + 20, panel.Y + 120, panel.Width - 40, 38), UiKit.InkDim, 0.66f);
         UiKit.Button(Game, batch, LastInput, ButtonRect(panel, 0), "PLAY", true, 1.0f);
         UiKit.Button(Game, batch, LastInput, ButtonRect(panel, 1), "SETTINGS", true, 0.86f);
         UiKit.Button(Game, batch, LastInput, ButtonRect(panel, 2), "CREDITS", true, 0.86f);
@@ -124,7 +124,7 @@ public sealed class WorldSelectScreen : MenuScreenBase
     {
         DrawBackdrop(batch);
         var vp = Game.GraphicsDevice.Viewport;
-        batch.Begin(samplerState: SamplerState.PointClamp);
+        batch.Begin(samplerState: SamplerState.LinearClamp);
         var panel = Panel(vp);
         UiKit.PanelBox(Game, batch, panel, "Worlds");
         UiKit.DrawCenteredFitted(Game, batch, "SELECT WORLD", new Rectangle(panel.X + 20, panel.Y + 48, panel.Width - 40, 46), UiKit.Ink, 1.08f);
@@ -226,7 +226,7 @@ public sealed class WorldCreateScreen : MenuScreenBase
     {
         DrawBackdrop(batch);
         var vp = Game.GraphicsDevice.Viewport;
-        batch.Begin(samplerState: SamplerState.PointClamp);
+        batch.Begin(samplerState: SamplerState.LinearClamp);
         var panel = Panel(vp);
         UiKit.PanelBox(Game, batch, panel, "Create World");
         UiKit.DrawCenteredFitted(Game, batch, "CONFIGURE THE FRONT", new Rectangle(panel.X + 20, panel.Y + 48, panel.Width - 40, 46), UiKit.Ink, 0.95f);
@@ -283,14 +283,14 @@ public sealed class SettingsScreen : MenuScreenBase
     {
         DrawBackdrop(batch);
         var vp = Game.GraphicsDevice.Viewport;
-        batch.Begin(samplerState: SamplerState.PointClamp);
+        batch.Begin(samplerState: SamplerState.LinearClamp);
         var panel = Panel(vp);
         UiKit.PanelBox(Game, batch, panel, "Settings");
         Game.Font.Draw(batch, "CONTROLS", new Vector2(panel.X + 44, panel.Y + 86), UiKit.Ink, 0.86f);
-        UiKit.DrawFitted(Game, batch, "Desktop: left-drag selects, right-click commands, WASD/arrow keys pan, mouse wheel zooms.", new Vector2(panel.X + 44, panel.Y + 136), UiKit.InkDim, 0.50f, panel.Width - 88);
-        UiKit.DrawFitted(Game, batch, "Android: tap to select, tap ground to move, tap enemy to attack, drag screen edges to pan.", new Vector2(panel.X + 44, panel.Y + 178), UiKit.InkDim, 0.50f, panel.Width - 88);
+        UiKit.DrawFitted(Game, batch, "Desktop: left-drag selects, right-click commands, WASD/arrow keys pan, mouse wheel zooms, harvesters mine automatically.", new Vector2(panel.X + 44, panel.Y + 136), UiKit.InkDim, 0.50f, panel.Width - 88);
+        UiKit.DrawFitted(Game, batch, "Android: tap to select, tap ground to move, tap enemy to attack, drag screen edges to pan; buttons respond on touch release.", new Vector2(panel.X + 44, panel.Y + 178), UiKit.InkDim, 0.50f, panel.Width - 88);
         Game.Font.Draw(batch, "DISPLAY", new Vector2(panel.X + 44, panel.Y + 256), UiKit.Ink, 0.86f);
-        UiKit.DrawFitted(Game, batch, "The window is now resizable. UI panels scale to the viewport and gameplay HUD keeps controls inside safe areas.", new Vector2(panel.X + 44, panel.Y + 306), UiKit.InkDim, 0.50f, panel.Width - 88);
+        UiKit.DrawFitted(Game, batch, "The window is resizable. UI panels scale to the viewport, Android taps now use release-position hit testing, and gameplay HUD keeps controls inside safe areas.", new Vector2(panel.X + 44, panel.Y + 306), UiKit.InkDim, 0.50f, panel.Width - 88);
         UiKit.Button(Game, batch, LastInput, BackButton(panel), "BACK", true, 0.74f);
         batch.End();
     }
@@ -314,14 +314,14 @@ public sealed class CreditsScreen : MenuScreenBase
     {
         DrawBackdrop(batch);
         var vp = Game.GraphicsDevice.Viewport;
-        batch.Begin(samplerState: SamplerState.PointClamp);
+        batch.Begin(samplerState: SamplerState.LinearClamp);
         var panel = Panel(vp);
         UiKit.PanelBox(Game, batch, panel, "Credits");
         UiKit.DrawCenteredFitted(Game, batch, "WORLD ORDER", new Rectangle(panel.X + 20, panel.Y + 62, panel.Width - 40, 50), UiKit.Ink, 1.08f);
         UiKit.DrawFitted(Game, batch, "Code, game design, UI layout, map generation, AI skirmish systems: OpenAI GPT-5.5 Thinking.", new Vector2(panel.X + 42, panel.Y + 148), UiKit.InkDim, 0.50f, panel.Width - 84);
         UiKit.DrawFitted(Game, batch, "Tanks, weapons, boats, explosions and RPG desert set: CraftPix free asset packs.", new Vector2(panel.X + 42, panel.Y + 205), UiKit.InkDim, 0.50f, panel.Width - 84);
         UiKit.DrawFitted(Game, batch, "Desert Top-Down Tileset: Franco Giachetti / LudicArts.com, CC BY 3.0.", new Vector2(panel.X + 42, panel.Y + 262), UiKit.InkDim, 0.50f, panel.Width - 84);
-        UiKit.DrawFitted(Game, batch, "Phase 1 goal: a playable RTS foundation ready for iteration, not a mocked menu shell.", new Vector2(panel.X + 42, panel.Y + 334), UiKit.Ink, 0.54f, panel.Width - 84);
+        UiKit.DrawFitted(Game, batch, "Phase 2 adds pathfinding, fog of war, harvesters, resource fields and a cleaner tactical HUD.", new Vector2(panel.X + 42, panel.Y + 334), UiKit.Ink, 0.54f, panel.Width - 84);
         UiKit.Button(Game, batch, LastInput, BackButton(panel), "BACK", true, 0.74f);
         batch.End();
     }
@@ -358,7 +358,7 @@ public sealed class LoadingScreen : IGameScreen
     public void Draw(GameTime time, SpriteBatch batch)
     {
         var vp = _game.GraphicsDevice.Viewport;
-        batch.Begin(samplerState: SamplerState.PointClamp);
+        batch.Begin(samplerState: SamplerState.LinearClamp);
         UiKit.Fill(batch, _game.Pixel, new Rectangle(0, 0, vp.Width, vp.Height), new Color(18, 14, 11));
         var sand = _game.Assets.Get("terrain_sand_2");
         for (int y = 0; y < vp.Height; y += 96)

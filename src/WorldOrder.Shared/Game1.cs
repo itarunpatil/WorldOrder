@@ -34,7 +34,7 @@ public sealed class Game1 : Game
 
     protected override void Initialize()
     {
-        Window.Title = "World Order - Phase 1";
+        Window.Title = "World Order - Phase 2";
         Window.AllowUserResizing = !IsMobile;
         _graphics.SynchronizeWithVerticalRetrace = true;
         _graphics.PreferredBackBufferWidth = 1280;
@@ -49,7 +49,7 @@ public sealed class Game1 : Game
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         Assets = new AssetBank(GraphicsDevice);
         Assets.LoadCore();
-        Font = new BitmapFont(Assets.Get("font_hud"), 24, 32);
+        Font = new BitmapFont(Assets.Get("font_ui"), 32, 40, 0.60f);
         Saves = new SaveManager();
         Screens = new ScreenStack(this);
         Screens.Change(new MainMenuScreen(this));

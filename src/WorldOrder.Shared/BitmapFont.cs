@@ -8,13 +8,15 @@ public sealed class BitmapFont
     private readonly Texture2D _texture;
     private readonly int _cellW;
     private readonly int _cellH;
+    private readonly float _advanceFactor;
     private const int Columns = 16;
 
-    public BitmapFont(Texture2D texture, int cellW, int cellH)
+    public BitmapFont(Texture2D texture, int cellW, int cellH, float advanceFactor = 0.64f)
     {
         _texture = texture;
         _cellW = cellW;
         _cellH = cellH;
+        _advanceFactor = advanceFactor;
     }
 
     public Vector2 Measure(string text, float scale = 1f)
@@ -33,7 +35,7 @@ public sealed class BitmapFont
             else line++;
         }
         max = System.Math.Max(max, line);
-        return new Vector2(max * _cellW * 0.7f * scale, lines * _cellH * scale);
+        return new Vector2(max * _cellW * _advanceFactor * scale, lines * _cellH * scale);
     }
 
     public void Draw(SpriteBatch batch, string text, Vector2 position, Color color, float scale = 1f, float alpha = 1f)
@@ -53,7 +55,7 @@ public sealed class BitmapFont
             int idx = ch - 32;
             var src = new Rectangle((idx % Columns) * _cellW, (idx / Columns) * _cellH, _cellW, _cellH);
             batch.Draw(_texture, p, src, color * alpha, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
-            p.X += _cellW * 0.7f * scale;
+            p.X += _cellW * _advanceFactor * scale;
         }
     }
 
