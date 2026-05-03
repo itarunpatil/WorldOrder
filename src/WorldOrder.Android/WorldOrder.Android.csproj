@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-android34.0</TargetFramework>
+    <SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>WorldOrder</RootNamespace>
+    <AssemblyName>WorldOrder.Android</AssemblyName>
+    <ApplicationTitle>World Order</ApplicationTitle>
+    <ApplicationId>com.worldorder.rts</ApplicationId>
+    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidPackageFormats>apk</AndroidPackageFormats>
+    <AndroidSupportedAbis>armeabi-v7a;arm64-v8a;x86;x86_64</AndroidSupportedAbis>
+    <AndroidUseAapt2>true</AndroidUseAapt2>
+    <AndroidCreatePackagePerAbi>false</AndroidCreatePackagePerAbi>
+    <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <PublishTrimmed>false</PublishTrimmed>
+    <AndroidKeyStore>true</AndroidKeyStore>
+    <AndroidSigningKeyStore>..\..\build\signing\worldorder.keystore</AndroidSigningKeyStore>
+    <AndroidSigningKeyAlias>worldorder</AndroidSigningKeyAlias>
+    <AndroidSigningKeyPass>worldorder</AndroidSigningKeyPass>
+    <AndroidSigningStorePass>worldorder</AndroidSigningStorePass>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MonoGame.Framework.Android" Version="3.8.4.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\WorldOrder.Shared\**\*.cs" LinkBase="WorldOrder" />
+    <AndroidAsset Include="..\..\Content\**\*.*" Link="Content\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

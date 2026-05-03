@@ -1,0 +1,44 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows ${{ matrix.rid }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [win-x64, win-arm64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore src/WorldOrder.Desktop/WorldOrder.Desktop.csproj
+
+      - name: Publish
+        shell: pwsh
+        run: |
+          $out = "artifacts/windows/${{ matrix.rid }}"
+          dotnet publish src/WorldOrder.Desktop/WorldOrder.Desktop.csproj -c Release -r ${{ matrix.rid }} --self-contained true -o $out /p:PublishSingleFile=true
+          $sha = "${{ github.sha }}".Substring(0, 12)
+          Compress-Archive -Path "$out/*" -DestinationPath "artifacts/WorldOrder-$sha-${{ matrix.rid }}.zip" -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WorldOrder-${{ github.sha }}-${{ matrix.rid }}
+          path: artifacts/WorldOrder-*.zip

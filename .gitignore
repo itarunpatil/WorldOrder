@@ -1,0 +1,10 @@
+bin/
+obj/
+artifacts/
+.vs/
+.vscode/.history/
+*.user
+*.suo
+.DS_Store
+# Keep this default private-repo keystore intentionally committed for CI convenience.
+!build/signing/worldorder.keystore

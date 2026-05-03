@@ -1,0 +1,63 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Android signed universal APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Install Android workload
+        run: dotnet workload install android
+
+      - name: Restore
+        run: dotnet restore src/WorldOrder.Android/WorldOrder.Android.csproj
+
+      - name: Publish signed APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet publish src/WorldOrder.Android/WorldOrder.Android.csproj \
+            -f net8.0-android34.0 \
+            -c Release \
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore=../../build/signing/worldorder.keystore \
+            -p:AndroidSigningKeyAlias=worldorder \
+            -p:AndroidSigningKeyPass=worldorder \
+            -p:AndroidSigningStorePass=worldorder \
+            -p:AndroidPackageFormats=apk \
+            -p:AndroidSupportedAbis='armeabi-v7a;arm64-v8a;x86;x86_64' \
+            -p:ApplicationVersion=${{ github.run_number }}
+          mkdir -p artifacts/android
+          short_sha="$(echo "${{ github.sha }}" | cut -c1-12)"
+          signed_apk="$(find src/WorldOrder.Android/bin/Release -name '*-signed.apk' | head -n 1)"
+          if [ -z "$signed_apk" ]; then signed_apk="$(find src/WorldOrder.Android/bin/Release -name '*.apk' | head -n 1)"; fi
+          cp "$signed_apk" "artifacts/android/WorldOrder-${short_sha}-android-universal-signed.apk"
+          sha256sum "artifacts/android/WorldOrder-${short_sha}-android-universal-signed.apk" > "artifacts/android/WorldOrder-${short_sha}-android-universal-signed.apk.sha256"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: WorldOrder-${{ github.sha }}-android-signed
+          path: artifacts/android/*
