@@ -10,6 +10,7 @@
     <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
     <SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidManifest>AndroidManifest.xml</AndroidManifest>
     <AndroidUseAapt2>true</AndroidUseAapt2>
     <AndroidCreatePackagePerAbi>false</AndroidCreatePackagePerAbi>
     <AndroidLinkTool>r8</AndroidLinkTool>
