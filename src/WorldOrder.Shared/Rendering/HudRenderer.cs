@@ -2,7 +2,6 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using WorldOrder.Core;
 using WorldOrder.Gameplay;
-using WorldOrder.UI;
 
 namespace WorldOrder.Rendering;
 
@@ -14,67 +13,163 @@ public sealed class HudRenderer
 
     public void Draw(SpriteBatch batch, WorldSession session)
     {
-        var ui = _game.Ui;
         var viewport = _game.GraphicsDevice.Viewport.Bounds;
-        var v = session.State.Vitals;
-        ui.Panel(batch, new Rectangle(18, 18, 345, 128), new Color(85, 88, 82), new Color(18, 20, 19, 210));
-        ui.Label(batch, $"DAY {session.State.Day}  {ClockText(session)}", new Vector2(32, 32), new Color(232, 226, 188), 2);
-        ui.Bar(batch, new Rectangle(32, 60, 160, 16), v.Health / 100f, new Color(178, 48, 43), new Color(55, 27, 27));
-        ui.Label(batch, "HP", new Vector2(202, 59), Color.White, 2);
-        ui.Bar(batch, new Rectangle(32, 82, 160, 16), v.Hunger / 100f, new Color(202, 138, 62), new Color(55, 37, 24));
-        ui.Label(batch, "FOOD", new Vector2(202, 81), Color.White, 2);
-        ui.Bar(batch, new Rectangle(32, 104, 160, 16), v.Thirst / 100f, new Color(67, 138, 202), new Color(23, 40, 55));
-        ui.Label(batch, "WATER", new Vector2(202, 103), Color.White, 2);
-        ui.Bar(batch, new Rectangle(32, 126, 160, 14), v.Stamina / 100f, new Color(72, 179, 88), new Color(22, 48, 27));
+        DrawSurvivalPanel(batch, session, viewport);
+        DrawQuickbar(batch, session, viewport);
 
-        var x = 20;
-        var y = viewport.Height - 96;
-        ui.Panel(batch, new Rectangle(x, y, 570, 78), new Color(84, 87, 82), new Color(16, 18, 17, 210));
-        var inventory = session.State.Inventory;
-        DrawItem(batch, "WOOD", inventory.Count(ItemId.Wood), x + 16, y + 18);
-        DrawItem(batch, "SCRAP", inventory.Count(ItemId.Scrap), x + 104, y + 18);
-        DrawItem(batch, "FOOD", inventory.Count(ItemId.Food), x + 205, y + 18);
-        DrawItem(batch, "WATER", inventory.Count(ItemId.Water), x + 294, y + 18);
-        DrawItem(batch, "BANDAGE", inventory.Count(ItemId.Bandage), x + 398, y + 18);
-        DrawItem(batch, "AMMO", inventory.Count(ItemId.Ammo), x + 510, y + 18);
-
-        if (session.BuildMode)
-        {
-            var def = GameDefinitions.Buildables[MathTools.ClampInt(session.SelectedBuildableIndex, 0, GameDefinitions.Buildables.Length - 1)];
-            ui.Panel(batch, new Rectangle(viewport.Width - 360, 20, 332, 86), new Color(211, 170, 80), new Color(22, 24, 23, 225));
-            ui.Label(batch, $"BUILD: {def.Name}".ToUpperInvariant(), new Vector2(viewport.Width - 342, 36), new Color(244, 229, 154), 2);
-            ui.Label(batch, "1-4 SELECT  TAB NEXT", new Vector2(viewport.Width - 342, 62), Color.White, 2);
-            ui.Label(batch, CostText(def), new Vector2(viewport.Width - 342, 84), new Color(190, 212, 184), 2);
-        }
-
-        if (!string.IsNullOrWhiteSpace(session.CurrentMessage))
-        {
-            var text = session.CurrentMessage;
-            var width = text.Length * 12 + 30;
-            var rect = new Rectangle(viewport.Width / 2 - width / 2, 28, width, 36);
-            ui.Panel(batch, rect, new Color(210, 180, 90), new Color(22, 22, 18, 225));
-            ui.Label(batch, text, new Vector2(rect.X + 15, rect.Y + 10), Color.White, 2);
-        }
+        if (session.BuildMode) DrawBuildPanel(batch, session, viewport);
+        if (!string.IsNullOrWhiteSpace(session.CurrentMessage)) DrawMessage(batch, session.CurrentMessage, viewport);
+        if (session.State.Vitals.Health <= 0f) DrawDeathOverlay(batch, viewport);
+        if (session.CraftingOpen) DrawCraftingOverlay(batch, session, viewport);
 
         if (OperatingSystem.IsAndroid() || _game.Input.HasTouch) DrawTouchControls(batch, session, viewport);
-        else ui.Label(batch, "WASD MOVE  SHIFT SPRINT  LEFT CLICK/SPACE ATTACK  RIGHT CLICK/E GATHER  B BUILD  Q EAT/DRINK  H HEAL  R SAVE", new Vector2(20, viewport.Height - 22), new Color(200, 205, 197), 1);
+        else _game.Ui.Label(batch, "WASD MOVE  SHIFT SPRINT  LEFT CLICK/SPACE ATTACK  RIGHT CLICK/E GATHER  B BUILD  I/C CRAFT  Q EAT/DRINK  H HEAL  R SAVE", new Vector2(20, HotbarPanel(viewport).Y - 18), new Color(200, 205, 197), 1);
+    }
+
+    private void DrawSurvivalPanel(SpriteBatch batch, WorldSession session, Rectangle viewport)
+    {
+        var ui = _game.Ui;
+        var v = session.State.Vitals;
+        var panel = new Rectangle(18, 18, 326, 136);
+        ui.Panel(batch, panel, new Color(83, 88, 80), new Color(15, 18, 17, 218));
+        ui.Label(batch, $"DAY {session.State.Day}  {ClockText(session)}", new Vector2(panel.X + 16, panel.Y + 14), new Color(236, 226, 174), 2);
+        DrawStatusBar(batch, panel.X + 16, panel.Y + 48, "HP", v.Health / 100f, new Color(188, 46, 44), new Color(47, 22, 22));
+        DrawStatusBar(batch, panel.X + 16, panel.Y + 72, "FOOD", v.Hunger / 100f, new Color(207, 143, 62), new Color(52, 34, 22));
+        DrawStatusBar(batch, panel.X + 16, panel.Y + 96, "WATER", v.Thirst / 100f, new Color(68, 139, 207), new Color(21, 39, 56));
+        DrawStatusBar(batch, panel.X + 16, panel.Y + 120, "STAM", v.Stamina / 100f, new Color(75, 180, 92), new Color(22, 48, 27), 11);
+    }
+
+    private void DrawStatusBar(SpriteBatch batch, int x, int y, string label, float value, Color fill, Color back, int height = 14)
+    {
+        _game.Ui.Bar(batch, new Rectangle(x, y, 160, height), value, fill, back);
+        _game.Ui.Label(batch, label, new Vector2(x + 174, y - 1), Color.White, 2);
+    }
+
+    private void DrawQuickbar(SpriteBatch batch, WorldSession session, Rectangle viewport)
+    {
+        var inventory = session.State.Inventory;
+        var bar = HotbarPanel(viewport);
+        _game.Ui.Panel(batch, bar, new Color(84, 88, 81), new Color(15, 18, 17, 208));
+
+        for (var i = 0; i < Inventory.HotbarOrder.Length; i++)
+        {
+            var item = Inventory.HotbarOrder[i];
+            var rect = HotbarSlotRect(viewport, i);
+            DrawInventorySlot(batch, rect, item, inventory.Count(item), i == session.SelectedHotbarIndex, i + 1);
+        }
+    }
+
+    public static Rectangle HotbarPanel(Rectangle viewport)
+    {
+        var slotSize = Math.Clamp(viewport.Height / 11, 48, 68);
+        var gap = 8;
+        var count = Inventory.HotbarOrder.Length;
+        var width = count * slotSize + (count - 1) * gap + 28;
+        var x = viewport.Width / 2 - width / 2;
+        var y = viewport.Height - slotSize - 30;
+        return new Rectangle(x, y, width, slotSize + 20);
+    }
+
+    public static Rectangle HotbarSlotRect(Rectangle viewport, int index)
+    {
+        var panel = HotbarPanel(viewport);
+        var slotSize = Math.Clamp(viewport.Height / 11, 48, 68);
+        var gap = 8;
+        return new Rectangle(panel.X + 14 + index * (slotSize + gap), panel.Y + 10, slotSize, slotSize);
+    }
+
+    private void DrawInventorySlot(SpriteBatch batch, Rectangle rect, ItemId item, int count, bool selected, int number)
+    {
+        var border = selected ? new Color(234, 198, 92) : new Color(91, 95, 89);
+        var fill = selected ? new Color(54, 48, 36, 226) : new Color(24, 27, 26, 210);
+        _game.Ui.Panel(batch, rect, border, fill);
+        var icon = _game.Art.Texture(ItemTextureKey(item));
+        var iconSize = Math.Max(18, rect.Width - 18);
+        var iconRect = new Rectangle(rect.Center.X - iconSize / 2, rect.Y + 8, iconSize, iconSize);
+        batch.Draw(icon, iconRect, count > 0 ? Color.White : Color.White * 0.28f);
+        _game.Font.DrawShadow(batch, number.ToString(), new Vector2(rect.X + 5, rect.Y + 4), new Color(210, 214, 200), 1);
+        if (count > 0) _game.Font.DrawShadow(batch, count.ToString(), new Vector2(rect.Right - 18, rect.Bottom - 18), Color.White, 1);
+    }
+
+    private void DrawBuildPanel(SpriteBatch batch, WorldSession session, Rectangle viewport)
+    {
+        var def = GameDefinitions.Buildables[MathTools.ClampInt(session.SelectedBuildableIndex, 0, GameDefinitions.Buildables.Length - 1)];
+        var rect = new Rectangle(viewport.Width - 374, 76, 346, 96);
+        _game.Ui.Panel(batch, rect, new Color(211, 170, 80), new Color(22, 24, 23, 225));
+        _game.Ui.Label(batch, $"BUILD: {def.Name}".ToUpperInvariant(), new Vector2(rect.X + 18, rect.Y + 16), new Color(244, 229, 154), 2);
+        _game.Ui.Label(batch, "1-4 SELECT  TAB NEXT", new Vector2(rect.X + 18, rect.Y + 44), Color.White, 2);
+        _game.Ui.Label(batch, CostText(def.Cost), new Vector2(rect.X + 18, rect.Y + 70), new Color(190, 212, 184), 2);
+    }
+
+    private void DrawDeathOverlay(SpriteBatch batch, Rectangle viewport)
+    {
+        var rect = new Rectangle(viewport.Width / 2 - 270, 58, 540, 54);
+        _game.Ui.Panel(batch, rect, new Color(220, 68, 58), new Color(19, 18, 16, 232));
+        _game.Ui.Label(batch, "YOU DIED - LOAD OR START AGAIN", new Vector2(rect.X + 26, rect.Y + 16), new Color(245, 230, 190), 2);
+    }
+
+    private void DrawMessage(SpriteBatch batch, string text, Rectangle viewport)
+    {
+        var width = text.Length * 12 + 30;
+        var rect = new Rectangle(viewport.Width / 2 - width / 2, 28, width, 36);
+        _game.Ui.Panel(batch, rect, new Color(210, 180, 90), new Color(22, 22, 18, 225));
+        _game.Ui.Label(batch, text, new Vector2(rect.X + 15, rect.Y + 10), Color.White, 2);
+    }
+
+    public static Rectangle CraftingPanel(Rectangle viewport)
+    {
+        var width = Math.Min(760, viewport.Width - 96);
+        var height = Math.Min(540, viewport.Height - 120);
+        return new Rectangle(viewport.Width / 2 - width / 2, 72, width, height);
+    }
+
+    public static Rectangle CraftingRecipeRect(Rectangle viewport, int index)
+    {
+        var panel = CraftingPanel(viewport);
+        return new Rectangle(panel.X + 34, panel.Y + 104 + index * 70, panel.Width - 68, 56);
+    }
+
+    private void DrawCraftingOverlay(SpriteBatch batch, WorldSession session, Rectangle viewport)
+    {
+        batch.Draw(_game.Art.Pixel, viewport, Color.Black * 0.42f);
+        var panel = CraftingPanel(viewport);
+        _game.Ui.Panel(batch, panel, new Color(214, 176, 88), new Color(18, 20, 19, 238));
+        _game.Ui.Label(batch, "CRAFTING & INVENTORY", new Vector2(panel.X + 34, panel.Y + 30), new Color(238, 224, 156), 4);
+        _game.Ui.Label(batch, "PRESS 1-5 OR TAP A RECIPE  |  ESC / INV CLOSE", new Vector2(panel.X + 36, panel.Y + 72), new Color(196, 205, 188), 1);
+
+        var inventory = session.State.Inventory;
+        for (var i = 0; i < GameDefinitions.Recipes.Length; i++)
+        {
+            var recipe = GameDefinitions.Recipes[i];
+            var rect = CraftingRecipeRect(viewport, i);
+            var canCraft = inventory.HasCost(recipe.Cost);
+            _game.Ui.Panel(batch, rect, canCraft ? new Color(142, 170, 101) : new Color(88, 86, 80), canCraft ? new Color(35, 45, 31, 225) : new Color(28, 29, 28, 225));
+            var iconRect = new Rectangle(rect.X + 12, rect.Y + 8, 40, 40);
+            batch.Draw(_game.Art.Texture(ItemTextureKey(recipe.Result)), iconRect, canCraft ? Color.White : Color.White * 0.36f);
+            _game.Ui.Label(batch, $"{i + 1}. {recipe.Name.ToUpperInvariant()}  x{recipe.Count}", new Vector2(rect.X + 66, rect.Y + 9), canCraft ? Color.White : new Color(150, 156, 146), 2);
+            _game.Ui.Label(batch, CostText(recipe.Cost), new Vector2(rect.X + 66, rect.Y + 35), canCraft ? new Color(211, 226, 188) : new Color(140, 145, 135), 1);
+        }
     }
 
     private void DrawTouchControls(SpriteBatch batch, WorldSession session, Rectangle viewport)
     {
         var ui = _game.Ui;
-        var origin = TouchLayout.MoveOrigin(viewport);
-        var movePad = TouchLayout.MovePad(viewport);
-        ui.Panel(batch, new Rectangle((int)origin.X - 58, (int)origin.Y - 58, 116, 116), new Color(102, 106, 96) * 0.55f, new Color(20, 22, 22, 95));
-        batch.Draw(_game.Art.Pixel, new Rectangle((int)origin.X - 8, (int)origin.Y - 8, 16, 16), new Color(220, 220, 200) * 0.60f);
-        ui.Label(batch, "MOVE", new Vector2(movePad.X + 32, viewport.Height - 34), new Color(205, 210, 198), 1);
+        if (!session.CraftingOpen)
+        {
+            var origin = TouchLayout.MoveOrigin(viewport);
+            var movePad = TouchLayout.MovePad(viewport);
+            ui.Panel(batch, new Rectangle((int)origin.X - 58, (int)origin.Y - 58, 116, 116), new Color(102, 106, 96) * 0.55f, new Color(20, 22, 22, 95));
+            batch.Draw(_game.Art.Pixel, new Rectangle((int)origin.X - 8, (int)origin.Y - 8, 16, 16), new Color(220, 220, 200) * 0.60f);
+            ui.Label(batch, "MOVE", new Vector2(movePad.X + 32, viewport.Height - 34), new Color(205, 210, 198), 1);
 
-        DrawTouchButton(batch, TouchLayout.Attack(viewport), "ATK", new Color(204, 76, 66));
-        DrawTouchButton(batch, TouchLayout.Gather(viewport), "GET", new Color(202, 160, 70));
-        DrawTouchButton(batch, TouchLayout.Build(viewport), session.BuildMode ? "ON" : "BLD", new Color(110, 145, 210));
-        DrawTouchButton(batch, TouchLayout.Eat(viewport), "EAT", new Color(205, 146, 68));
-        DrawTouchButton(batch, TouchLayout.Heal(viewport), "MED", new Color(212, 218, 208));
-        DrawTouchButton(batch, TouchLayout.Pause(viewport), "II", new Color(190, 190, 180));
+            DrawTouchButton(batch, TouchLayout.Attack(viewport), "ATK", new Color(204, 76, 66));
+            DrawTouchButton(batch, TouchLayout.Gather(viewport), "GET", new Color(202, 160, 70));
+            DrawTouchButton(batch, TouchLayout.Build(viewport), session.BuildMode ? "ON" : "BLD", new Color(110, 145, 210));
+            DrawTouchButton(batch, TouchLayout.Eat(viewport), "EAT", new Color(205, 146, 68));
+            DrawTouchButton(batch, TouchLayout.Heal(viewport), "MED", new Color(212, 218, 208));
+        }
+        DrawTouchButton(batch, TouchLayout.Inventory(viewport), session.CraftingOpen ? "X" : "INV", new Color(196, 175, 92));
+        DrawTouchButton(batch, TouchLayout.Pause(viewport), session.CraftingOpen ? "X" : "II", new Color(190, 190, 180));
     }
 
     private void DrawTouchButton(SpriteBatch batch, Rectangle rect, string label, Color border)
@@ -85,15 +180,23 @@ public sealed class HudRenderer
         _game.Font.DrawShadow(batch, label, new Vector2(rect.Center.X - size.X * 0.5f, rect.Center.Y - size.Y * 0.5f), Color.White, scale);
     }
 
-    private void DrawItem(SpriteBatch batch, string label, int count, int x, int y)
+    public static string ItemTextureKey(ItemId item) => item switch
     {
-        _game.Ui.Label(batch, label, new Vector2(x, y), new Color(207, 211, 201), 1);
-        _game.Ui.Label(batch, count.ToString(), new Vector2(x, y + 22), Color.White, 2);
-    }
+        ItemId.Wood => "icon_woodwall",
+        ItemId.Scrap => "scrap",
+        ItemId.Stone => "icon_rock",
+        ItemId.Cloth => "cardboard",
+        ItemId.Food => "icon_food",
+        ItemId.Water => "icon_water",
+        ItemId.Bandage => "icon_bandage",
+        ItemId.Ammo => "icon_ammo",
+        ItemId.Pistol => "icon_pistol",
+        _ => "crate"
+    };
 
-    private static string CostText(BuildableDefinition def)
+    private static string CostText(IReadOnlyDictionary<ItemId, int> cost)
     {
-        return string.Join(" ", def.Cost.Select(c => $"{c.Key}:{c.Value}"));
+        return string.Join("  ", cost.Select(c => $"{GameDefinitions.ItemName(c.Key).ToUpperInvariant()}:{c.Value}"));
     }
 
     private static string ClockText(WorldSession session)

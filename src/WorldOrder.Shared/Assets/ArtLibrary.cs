@@ -181,29 +181,38 @@ public sealed class ArtLibrary
         loaded += LoadTexture("roofhole", "Objects/Buildings/Roof-hole_1_Gray.png");
         loaded += LoadTexture("roofhole2", "Objects/Buildings/Roof-hole_2_Red.png");
         loaded += LoadTexture("fence", "Tiles/Wire-Fence/Wire-Fence_Gate.png");
+        loaded += LoadTexture("ui_hp_back", "UI/HP/HP-Bar.png");
+        loaded += LoadTexture("ui_hp_fill", "UI/HP/HP.png");
+        loaded += LoadTexture("ui_hunger_back", "UI/Hunger/Hunger-Bar.png");
+        loaded += LoadTexture("ui_hunger_fill", "UI/Hunger/Hunger.png");
+        loaded += LoadTexture("ui_quickbar", "UI/Inventory/Quick-Access-Inventory.png");
+        loaded += LoadTexture("ui_slot", "UI/Inventory/Inventory-Cell.png");
+        loaded += LoadTexture("ui_slot_selected", "UI/Inventory/Inventory-Chosen.png");
+        loaded += LoadTexture("ui_crafting", "UI/Crafting/Crafting-main-menu.png");
+        loaded += LoadTexture("ui_crafting_slot", "UI/Crafting/Crafting-cell.png");
+        loaded += LoadTexture("icon_food", "UI/Inventory/Objects/Icon_Canned-food.png");
+        loaded += LoadTexture("icon_water", "UI/Inventory/Objects/Icon_Canned-soup.png");
+        loaded += LoadTexture("icon_bandage", "UI/Inventory/Objects/Icon_Bandage.png");
+        loaded += LoadTexture("icon_ammo", "UI/Inventory/Objects/Icon_Bullet-box_Green.png");
+        loaded += LoadTexture("icon_pistol", "UI/Inventory/Objects/Icon_Pistol.png");
+        loaded += LoadTexture("icon_woodwall", "UI/Inventory/Objects/Icon_Wooden-wall.png");
+        loaded += LoadTexture("icon_reinforced", "UI/Inventory/Objects/Icon_Reinforced-wooden-wall.png");
+        loaded += LoadTexture("icon_rock", "UI/Inventory/Objects/Icon_Rock.png");
 
+        // Phase 4: use only clean base tiles for terrain. Road stripes, crosswalks, curbs,
+        // and ruin detail are renderer/decorator overlays, never random ground variants.
         loaded += ReplaceTileFromSheet(TileType.DryGrass, "Tiles/Background_Green_TileSet.png", 0, 0);
         loaded += AddTileVariantFromSheet(TileType.DryGrass, "Tiles/Background_Green_TileSet.png", 1, 0);
-        loaded += AddTileVariantFromSheet(TileType.DryGrass, "Tiles/Background_Green_TileSet.png", 2, 0);
         loaded += ReplaceTileFromSheet(TileType.Dirt, "Tiles/Background_Bleak-Yellow_TileSet.png", 0, 0);
         loaded += AddTileVariantFromSheet(TileType.Dirt, "Tiles/Background_Bleak-Yellow_TileSet.png", 1, 0);
-        loaded += AddTileVariantFromSheet(TileType.Dirt, "Tiles/Background_Bleak-Yellow_TileSet.png", 2, 0);
         loaded += ReplaceTileFromSheet(TileType.Rubble, "Tiles/Garbage_TileSet.png", 0, 0);
-        loaded += AddTileVariantFromSheet(TileType.Rubble, "Tiles/Garbage_TileSet.png", 1, 0);
-        loaded += AddTileVariantFromSheet(TileType.Rubble, "Tiles/Garbage_TileSet.png", 2, 0);
-        loaded += AddTileVariantFromSheet(TileType.Rubble, "Tiles/Garbage_TileSet.png", 3, 0);
-        loaded += ReplaceTileFromSheet(TileType.Asphalt, "Tiles/Background_Green_TileSet.png", 0, 8);
-        loaded += AddTileVariantFromSheet(TileType.Asphalt, "Tiles/Background_Green_TileSet.png", 1, 11);
-        loaded += ReplaceTileFromSheet(TileType.Pavement, "Tiles/Background_Green_TileSet.png", 8, 0);
-        loaded += AddTileVariantFromSheet(TileType.Pavement, "Tiles/Background_Green_TileSet.png", 9, 0);
-        loaded += AddTileVariantFromSheet(TileType.Pavement, "Tiles/Background_Green_TileSet.png", 10, 0);
-        loaded += ReplaceTileFromSheet(TileType.BuildingFloor, "Tiles/Buildings/Buildings_gray_TileSet.png", 1, 1);
-        loaded += AddTileVariantFromSheet(TileType.BuildingFloor, "Tiles/Buildings/Buildings_gray_TileSet.png", 2, 1);
-        loaded += AddTileVariantFromSheet(TileType.BuildingFloor, "Tiles/Buildings/Buildings_gray_TileSet.png", 7, 4);
+        loaded += AddTileVariantFromSheet(TileType.Rubble, "Tiles/Garbage_TileSet.png", 4, 0);
+        loaded += ReplaceTileFromSheet(TileType.Asphalt, "Tiles/Background_Green_TileSet.png", 0, 7);
+        loaded += ReplaceTileFromSheet(TileType.Pavement, "Tiles/Background_Bleak-Yellow_TileSet.png", 0, 0);
+        loaded += AddTileVariantFromSheet(TileType.Pavement, "Tiles/Background_Bleak-Yellow_TileSet.png", 1, 0);
+        loaded += ReplaceTileFromSheet(TileType.BuildingFloor, "Tiles/Buildings/Buildings_gray_TileSet.png", 7, 4);
         loaded += AddTileVariantFromSheet(TileType.BuildingFloor, "Tiles/Buildings/Buildings_gray_TileSet.png", 8, 4);
-        loaded += ReplaceTileFromSheet(TileType.BuildingWall, "Tiles/Buildings/Buildings_gray_TileSet.png", 5, 0);
-        loaded += AddTileVariantFromSheet(TileType.BuildingWall, "Tiles/Buildings/Buildings_gray_TileSet.png", 6, 0);
-        loaded += AddTileVariantFromSheet(TileType.BuildingWall, "Tiles/Buildings/Buildings_gray_TileSet.png", 7, 0);
+        loaded += ReplaceTileFromSheet(TileType.BuildingWall, "Tiles/Brick-Wall_TileSet.png", 0, 0);
 
         ExternalArtLoaded = loaded > 0;
     }

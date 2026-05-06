@@ -26,6 +26,7 @@ public sealed class Player : Entity
         var viewport = session.Game.GraphicsDevice.Viewport.Bounds;
         _attackTimer = Math.Max(0f, _attackTimer - dt);
         _useTimer = Math.Max(0f, _useTimer - dt);
+        if (session.CraftingOpen) return;
 
         var movement = input.Movement;
         IsMoving = movement.LengthSquared() > 0.01f;
@@ -54,14 +55,26 @@ public sealed class Player : Entity
             session.PlayerAttack();
         }
 
-        if (input.Pressed(Keys.D1)) session.SelectedBuildableIndex = 0;
-        if (input.Pressed(Keys.D2)) session.SelectedBuildableIndex = 1;
-        if (input.Pressed(Keys.D3)) session.SelectedBuildableIndex = 2;
-        if (input.Pressed(Keys.D4)) session.SelectedBuildableIndex = 3;
-        if (input.Pressed(Keys.B) || input.Tapped(TouchLayout.Build(viewport))) session.BuildMode = !session.BuildMode;
+        HandleNumberKeys(session, input);
+        if (input.Pressed(Keys.B) || input.Tapped(TouchLayout.Build(viewport)))
+        {
+            session.BuildMode = !session.BuildMode;
+            session.CraftingOpen = false;
+        }
         if (input.Pressed(Keys.R)) session.SaveNow();
         if (input.Pressed(Keys.H) || input.Tapped(TouchLayout.Heal(viewport))) ConsumeHealing(session);
         if (input.Pressed(Keys.Q) || input.Tapped(TouchLayout.Eat(viewport))) EatOrDrink(session);
+    }
+
+    private static void HandleNumberKeys(WorldSession session, InputState input)
+    {
+        var keys = new[] { Keys.D1, Keys.D2, Keys.D3, Keys.D4, Keys.D5, Keys.D6, Keys.D7, Keys.D8, Keys.D9 };
+        for (var i = 0; i < keys.Length; i++)
+        {
+            if (!input.Pressed(keys[i])) continue;
+            if (session.BuildMode && i < GameDefinitions.Buildables.Length) session.SelectedBuildableIndex = i;
+            else if (i < Inventory.HotbarOrder.Length) session.SelectedHotbarIndex = i;
+        }
     }
 
 

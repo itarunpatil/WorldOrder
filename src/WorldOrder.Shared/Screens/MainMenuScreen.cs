@@ -57,7 +57,7 @@ public sealed class MainMenuScreen : GameScreen
         {
             case 0: Game.Screens.Change(new WorldCreateScreen(Game)); break;
             case 1: Game.Screens.Change(new WorldLoadScreen(Game)); break;
-            case 2: Game.Screens.Change(new SimpleTextScreen(Game, "SETTINGS", "PHASE 3 REBUILDS INPUT SAFETY, DESKTOP/MAXIMIZE BEHAVIOR, ANDROID TOUCH HIT-TESTING, WORLD NAME ENTRY, CLEANER CITY GENERATION, DIRECTED COMBAT, AND BETTER ASSET USE.\nPRESS ESC OR TAP BACK.")); break;
+            case 2: Game.Screens.Change(new SimpleTextScreen(Game, "SETTINGS", "PHASE 4 REBUILDS WORLD ASSEMBLY, CLEAN TILE SEMANTICS, CRAFTING, HOTBAR INVENTORY, PICKUPS/DROPS, BUILD PREVIEW, AND BETTER MOBILE/DESKTOP GAMEPLAY FLOW.\nPRESS ESC OR TAP BACK.")); break;
             case 3: Game.Screens.Change(new SimpleTextScreen(Game, "CREDITS", "WORLD ORDER\nPOST APOCALYPSE ASSET PACK INTEGRATED FOR THIS PRIVATE GAME REPOSITORY.\nENGINE: MONOGAME.\nPRESS ESC OR TAP BACK.")); break;
             case 4: Game.Exit(); break;
         }

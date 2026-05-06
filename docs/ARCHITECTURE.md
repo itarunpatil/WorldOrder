@@ -8,7 +8,7 @@
 
 ## World generation
 
-The world is divided into 32x32-tile chunks. Tile generation is deterministic from world tile coordinates and the world seed. Phase 3 uses a seeded district/city-cell model: road corridors with renderer-owned lane markings, sidewalks, city/ruin/industrial/wild districts, parcel buildings, spawn-plaza safety, wilderness/water noise, resource nodes, and a separate decoration pass. Loaded chunks are kept inside a radius around the player and removed outside a larger keep radius. This keeps memory and draw costs bounded while preserving an endless world.
+The world is divided into 32x32-tile chunks. Tile generation is deterministic from world tile coordinates and the world seed. Phase 4 uses a parcel-based district/city-cell model: clean road corridors with renderer-owned lane markings, sidewalks, city/ruin/industrial/wild districts, parks, plazas, parking lots, ruined lots, industrial yards, parcel buildings, spawn-sanctuary safety, resource nodes, and a separate decoration pass. Loaded chunks are kept inside a radius around the player and removed outside a larger keep radius. This keeps memory and draw costs bounded while preserving an endless world.
 
 ## Saving
 
@@ -16,7 +16,7 @@ Save files are JSON under the user's local app data folder. The save contains se
 
 ## Art pipeline
 
-The game does not require the MonoGame content pipeline. Real PostApocalypse PNG art is integrated under `GameAssets/PostApocalypse` and loaded at runtime with `Texture2D.FromStream`. Phase 3 binds cleaner ground variants, rubble tiles, environmental prop variants, vehicle variants, road props, and building props. Procedural art exists only as a startup-safe fallback if a required PNG is missing.
+The game does not require the MonoGame content pipeline. Real PostApocalypse PNG art is integrated under `GameAssets/PostApocalypse` and loaded at runtime with `Texture2D.FromStream`. Phase 4 binds clean base terrain, brick/building tiles, hotbar/crafting UI icons, environmental prop variants, vehicle variants, road props, and building props. Procedural art exists only as a startup-safe fallback if a required PNG is missing.
 
 Packaging paths:
 

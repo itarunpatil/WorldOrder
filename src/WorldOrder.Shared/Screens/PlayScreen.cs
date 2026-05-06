@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using WorldOrder.Core;
 using WorldOrder.Rendering;
+using WorldOrder.Gameplay;
 
 namespace WorldOrder.Screens;
 
@@ -23,6 +24,29 @@ public sealed class PlayScreen : GameScreen
     public override void Update(GameTime gameTime)
     {
         var viewport = Game.GraphicsDevice.Viewport.Bounds;
+        for (var i = 0; i < Inventory.HotbarOrder.Length; i++)
+        {
+            if (Game.Input.Tapped(HudRenderer.HotbarSlotRect(viewport, i)))
+            {
+                _session.SelectedHotbarIndex = i;
+                return;
+            }
+        }
+
+        if (Game.Input.Pressed(Keys.I) || Game.Input.Pressed(Keys.C) || Game.Input.Tapped(TouchLayout.Inventory(viewport)))
+        {
+            _session.CraftingOpen = !_session.CraftingOpen;
+            _session.BuildMode = false;
+        }
+
+        if (_session.CraftingOpen)
+        {
+            if (Game.Input.Pressed(Keys.Escape) || Game.Input.Tapped(TouchLayout.Pause(viewport))) _session.CraftingOpen = false;
+            HandleCraftingInput(viewport);
+            Game.Camera.Follow(_session.Player.Position, (float)gameTime.ElapsedGameTime.TotalSeconds);
+            return;
+        }
+
         if (Game.Input.Pressed(Keys.Escape) || Game.Input.Tapped(TouchLayout.Pause(viewport))) _paused = !_paused;
         if (_paused)
         {
@@ -54,4 +78,18 @@ public sealed class PlayScreen : GameScreen
         }
         spriteBatch.End();
     }
+
+    private void HandleCraftingInput(Rectangle viewport)
+    {
+        var keys = new[] { Keys.D1, Keys.D2, Keys.D3, Keys.D4, Keys.D5, Keys.NumPad1, Keys.NumPad2, Keys.NumPad3, Keys.NumPad4, Keys.NumPad5 };
+        for (var i = 0; i < GameDefinitions.Recipes.Length; i++)
+        {
+            if ((i < 5 && (Game.Input.Pressed(keys[i]) || Game.Input.Pressed(keys[i + 5]))) || Game.Input.Tapped(HudRenderer.CraftingRecipeRect(viewport, i)))
+            {
+                _session.TryCraftRecipe(i);
+                return;
+            }
+        }
+    }
+
 }

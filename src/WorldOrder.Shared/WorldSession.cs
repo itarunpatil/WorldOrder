@@ -31,7 +31,9 @@ public sealed class WorldSession
     public EntityManager Entities { get; }
     public List<WorldEffect> Effects { get; } = new();
     public bool BuildMode { get; set; }
+    public bool CraftingOpen { get; set; }
     public int SelectedBuildableIndex { get; set; }
+    public int SelectedHotbarIndex { get; set; }
     public string CurrentMessage => _messages.Count == 0 ? string.Empty : _messages.Peek();
 
     public void Preload()
@@ -42,6 +44,13 @@ public sealed class WorldSession
     public void Update(GameTime gameTime)
     {
         var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        if (State.Vitals.Health <= 0f)
+        {
+            UpdateEffects(dt);
+            UpdateMessages(dt);
+            return;
+        }
+
         AdvanceClock(dt);
         Chunks.EnsureAround(Player.Position);
         Player.Update(this, gameTime);
@@ -113,8 +122,10 @@ public sealed class WorldSession
             EmitEffect(WorldEffectKind.HitSpark, best.Position + new Vector2(0f, -16f), knockback * 0.06f, 0.22f);
             if (best.IsDead)
             {
-                State.Inventory.Add(ItemId.Cloth, 1);
-                if (State.Day % 2 == 0) State.Inventory.Add(ItemId.Scrap, 1);
+                var drops = new List<(ItemId Item, int Count)> { (ItemId.Cloth, 1) };
+                if (Hashing.Unit((int)best.Position.X, (int)best.Position.Y, State.Seed + State.Day) > 0.55f) drops.Add((ItemId.Scrap, 1));
+                if (Hashing.Unit((int)best.Position.X, (int)best.Position.Y, State.Seed + 71) > 0.86f) drops.Add((ItemId.Ammo, 2));
+                Entities.DropLoot(best.Position, drops);
                 EmitEffect(WorldEffectKind.Blood, best.Position, Vector2.Zero, 12f);
                 EmitEffect(WorldEffectKind.DeathPuff, best.Position + new Vector2(0f, -16f), new Vector2(0f, -10f), 0.55f);
                 Log("ZOMBIE DOWN");
@@ -125,6 +136,22 @@ public sealed class WorldSession
         {
             EmitEffect(WorldEffectKind.DamageText, attackOrigin + Player.Facing * 30f, new Vector2(0f, -16f), 0.35f, "MISS", new Color(180, 185, 174));
         }
+    }
+
+
+    public bool TryCraftRecipe(int index)
+    {
+        if (index < 0 || index >= GameDefinitions.Recipes.Length) return false;
+        var recipe = GameDefinitions.Recipes[index];
+        if (!State.Inventory.Pay(recipe.Cost))
+        {
+            Log("MISSING CRAFTING MATERIALS");
+            return false;
+        }
+        State.Inventory.Add(recipe.Result, recipe.Count);
+        EmitEffect(WorldEffectKind.HitSpark, Player.Position + new Vector2(0f, -26f), Vector2.Zero, 0.34f, $"+{recipe.Name.ToUpperInvariant()}", new Color(238, 217, 130));
+        Log($"CRAFTED {recipe.Name}".ToUpperInvariant());
+        return true;
     }
 
     public void DamagePlayer(float damage, float infection)
@@ -172,7 +199,11 @@ public sealed class WorldSession
         v.Thirst = Math.Max(0f, v.Thirst - dt * 0.026f);
         if (v.Hunger <= 0f || v.Thirst <= 0f) v.Health = Math.Max(0f, v.Health - dt * 1.8f);
         if (v.Infection > 0f) v.Health = Math.Max(0f, v.Health - dt * v.Infection * 0.0025f);
-        if (v.Health <= 0f) Log("YOU DIED - LOAD OR START AGAIN");
+        if (v.Health <= 0f)
+        {
+            v.Health = 0f;
+            Log("YOU DIED - LOAD OR START AGAIN");
+        }
     }
 
     private void HandleBuilding()

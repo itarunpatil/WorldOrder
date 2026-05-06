@@ -65,6 +65,8 @@ public sealed class WorldRenderer
             batch.Draw(texture, dest, Color.White);
         }
 
+        DrawBuildPreview(batch, session, bounds);
+
         foreach (var entity in session.Entities.All.OrderBy(e => e.Position.Y))
         {
             DrawEntity(batch, entity, session, gameTime);
@@ -72,6 +74,30 @@ public sealed class WorldRenderer
         DrawPlayer(batch, session, gameTime);
         DrawForegroundEffects(batch, session);
         DrawNightOverlay(batch, session);
+    }
+
+    private void DrawBuildPreview(SpriteBatch batch, WorldSession session, Rectangle bounds)
+    {
+        if (!session.BuildMode) return;
+        var pointer = _game.Input.WorldPointer(_game.Camera, _game.GraphicsDevice);
+        var tx = MathTools.FloorDiv((int)MathF.Floor(pointer.X), Balance.TileSize);
+        var ty = MathTools.FloorDiv((int)MathF.Floor(pointer.Y), Balance.TileSize);
+        var dest = new Rectangle(tx * Balance.TileSize, ty * Balance.TileSize, Balance.TileSize, Balance.TileSize);
+        if (!dest.Intersects(bounds)) return;
+        var canPlace = session.Chunks.CanPlaceBlock(tx, ty) && Vector2.Distance(session.Player.Position, new Vector2((tx + 0.5f) * Balance.TileSize, (ty + 0.5f) * Balance.TileSize)) <= 160f;
+        var def = GameDefinitions.Buildables[MathTools.ClampInt(session.SelectedBuildableIndex, 0, GameDefinitions.Buildables.Length - 1)];
+        var texture = def.Kind switch
+        {
+            BlockKind.ReinforcedWall => _game.Art.Texture("wallreinforced"),
+            BlockKind.Campfire => _game.Art.Texture("campfire"),
+            BlockKind.Floor => _game.Art.Tile(TileType.BuildingFloor, tx, ty),
+            _ => _game.Art.Texture("wallwood")
+        };
+        batch.Draw(texture, dest, (canPlace ? Color.White : new Color(255, 80, 70)) * 0.55f);
+        batch.Draw(_game.Art.Pixel, new Rectangle(dest.X, dest.Y, dest.Width, 2), canPlace ? new Color(126, 224, 125) : new Color(255, 80, 70));
+        batch.Draw(_game.Art.Pixel, new Rectangle(dest.X, dest.Bottom - 2, dest.Width, 2), canPlace ? new Color(126, 224, 125) : new Color(255, 80, 70));
+        batch.Draw(_game.Art.Pixel, new Rectangle(dest.X, dest.Y, 2, dest.Height), canPlace ? new Color(126, 224, 125) : new Color(255, 80, 70));
+        batch.Draw(_game.Art.Pixel, new Rectangle(dest.Right - 2, dest.Y, 2, dest.Height), canPlace ? new Color(126, 224, 125) : new Color(255, 80, 70));
     }
 
 
@@ -230,18 +256,11 @@ public sealed class WorldRenderer
 
     private void DrawPickup(SpriteBatch batch, Pickup pickup)
     {
-        var key = pickup.Item switch
-        {
-            ItemId.Wood => "wood",
-            ItemId.Scrap => "scrap",
-            ItemId.Food => "food",
-            ItemId.Water => "water",
-            ItemId.Bandage => "medkit",
-            ItemId.Pistol => "pistol",
-            _ => "scrap"
-        };
-        var texture = _game.Art.Texture(key);
-        batch.Draw(texture, new Rectangle((int)pickup.Position.X - 10, (int)pickup.Position.Y - 10, 20, 20), Color.White);
+        var texture = _game.Art.Texture(HudRenderer.ItemTextureKey(pickup.Item));
+        var pulse = 1f + MathF.Sin((float)Environment.TickCount * 0.006f + pickup.Position.X * 0.01f) * 0.08f;
+        var size = (int)(22 * pulse);
+        batch.Draw(texture, new Rectangle((int)pickup.Position.X - size / 2, (int)pickup.Position.Y - size / 2, size, size), Color.White);
+        if (pickup.Count > 1) _game.Font.DrawShadow(batch, pickup.Count.ToString(), pickup.Position + new Vector2(8, 4), Color.White, 1);
     }
 
     private void DrawGroundEffects(SpriteBatch batch, WorldSession session, Rectangle bounds)

@@ -23,6 +23,18 @@ public sealed class Inventory
 {
     public List<ItemStack> Items { get; set; } = new();
 
+    public static readonly ItemId[] HotbarOrder =
+    {
+        ItemId.Wood,
+        ItemId.Scrap,
+        ItemId.Food,
+        ItemId.Water,
+        ItemId.Bandage,
+        ItemId.Ammo,
+        ItemId.Pistol,
+        ItemId.Cloth
+    };
+
     public static Inventory CreateStarter()
     {
         var inventory = new Inventory();
@@ -30,6 +42,7 @@ public sealed class Inventory
         inventory.Add(ItemId.Water, 2);
         inventory.Add(ItemId.Wood, 6);
         inventory.Add(ItemId.Scrap, 2);
+        inventory.Add(ItemId.Cloth, 1);
         return inventory;
     }
 

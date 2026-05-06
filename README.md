@@ -2,14 +2,14 @@
 
 World Order is a C# MonoGame post-apocalypse zombie survival game. The repository is set up for Windows DesktopGL and Android builds, with separate GitHub Actions workflows that trigger on every push to every branch.
 
-## Phase 3 playable feature set
+## Phase 4 playable feature set
 
 - Main menu, world creation, save loading, settings/credits, pause menu, and loading screen.
-- Endless deterministic open world with chunk streaming, a second-pass seeded city/wasteland generator, cleaner road surfaces, sidewalks, districts, abandoned/ruined buildings, safer spawn camp, resources, and environmental decoration.
+- Endless deterministic open world with chunk streaming, a parcel-based city/wasteland generator, clean road surfaces, sidewalks, districts, parks, plazas, parking lots, abandoned/ruined buildings, safer spawn sanctuary, resources, and environmental decoration.
 - Survival loop: health, hunger, thirst, stamina, infection pressure, day/night cycle, autosave, manual save.
 - Zombies with deterministic state rules, sight tracking, attacks, escalation by day, soft cap, hurt flashes, knockback, death states, and chunk-distance cleanup.
-- Gathering, salvage, pickups, inventory, food/water consumption, bandage healing, melee/firearm combat, damage numbers, hit sparks, slash effects, blood decals, and loot tables.
-- Building mode with wooden walls, reinforced walls, floors, and campfires with material costs.
+- Gathering, salvage, pickups, drops, hotbar inventory, crafting recipes, food/water consumption, bandage healing, melee/firearm combat, damage numbers, hit sparks, slash effects, blood decals, and loot tables.
+- Building mode with placement preview, wooden walls, reinforced walls, floors, and campfires with material costs.
 - Integrated PostApocalypse pixel art from `GameAssets/PostApocalypse`, with procedural fallback only as a safety net.
 - Android package name: `com.world.order`.
 - Android immersive landscape rendering with strict touch hit-testing, smaller movement pad, touch buttons, and system keyboard/world-name fallback controls.
@@ -22,6 +22,8 @@ World Order is a C# MonoGame post-apocalypse zombie survival game. The repositor
 - Gather/interact: `E` or right click
 - Attack: `Space`, `F`, or left click toward cursor
 - Build mode: `B`
+- Crafting/inventory: `I` or `C`
+- Select hotbar: `1`-`8` outside build mode
 - Select buildable: `1`-`4`, or `Tab` while building
 - Eat/drink: `Q`
 - Heal: `H`
@@ -49,6 +51,7 @@ dotnet run --project src/WorldOrder.Desktop/WorldOrder.Desktop.csproj
 - BLD: toggle build mode
 - EAT: consume food/water
 - MED: use bandage
+- INV: open crafting/inventory overlay
 - II: pause
 
 ## Local Android publish
@@ -127,3 +130,16 @@ Phase 3 focuses on control correctness and world readability:
 - Build mode consumes the pointer for block placement instead of accidentally attacking.
 - The road/tile atlas selection was corrected so road lane paint is drawn intentionally instead of every road tile repeating striping art.
 - Zombie spawning has a short new-world grace period and starts farther away.
+
+
+## Phase 4 production-pass notes
+
+Phase 4 focuses on making the game feel like a coherent survival game instead of a tile stress-test:
+
+- World generation is now parcel-based: roads, sidewalks, lots, parks, plazas, parking lots, ruined lots, industrial yards, and buildings are generated from deterministic city parcels instead of noisy per-tile patchwork.
+- Road and building tile atlas usage was corrected again: base road tiles are clean, lane/crosswalk paint is drawn by the renderer, and decorative rubble is no longer used as random ground everywhere.
+- The HUD now uses a proper quickbar layout with selectable hotbar slots and item icons.
+- Crafting/inventory overlay is available on desktop and Android through `I`, `C`, or the touch `INV` button.
+- Zombie death now drops loot into the world instead of silently adding it to inventory.
+- Build mode has a green/red placement preview so the player can understand range and blockage before spending materials.
+- Game-over state now freezes simulation updates and shows a clear death banner.

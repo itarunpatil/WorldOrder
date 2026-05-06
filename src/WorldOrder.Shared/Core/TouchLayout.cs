@@ -19,6 +19,7 @@ public static class TouchLayout
     public static Rectangle Eat(Rectangle viewport) => CircleButton(viewport, 2, 1);
     public static Rectangle Heal(Rectangle viewport) => CircleButton(viewport, 3, 1);
     public static Rectangle Pause(Rectangle viewport) => new(viewport.Width - 88, 18, 64, 48);
+    public static Rectangle Inventory(Rectangle viewport) => new(viewport.Width - 168, 18, 64, 48);
 
     public static bool IsGameplayControl(Rectangle viewport, Vector2 point)
     {
@@ -28,7 +29,8 @@ public static class TouchLayout
             || Build(viewport).Contains(point.ToPoint())
             || Eat(viewport).Contains(point.ToPoint())
             || Heal(viewport).Contains(point.ToPoint())
-            || Pause(viewport).Contains(point.ToPoint());
+            || Pause(viewport).Contains(point.ToPoint())
+            || Inventory(viewport).Contains(point.ToPoint());
     }
 
     private static Rectangle CircleButton(Rectangle viewport, int columnFromRight, int rowFromBottom)
