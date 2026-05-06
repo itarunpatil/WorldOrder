@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Xna.Framework;
 using WorldOrder.Core;
+using WorldOrder.Gameplay;
 
 namespace WorldOrder.World;
 
