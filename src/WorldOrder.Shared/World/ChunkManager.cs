@@ -65,7 +65,16 @@ public sealed class ChunkManager
         var tx = MathTools.FloorDiv((int)MathF.Floor(world.X), Balance.TileSize);
         var ty = MathTools.FloorDiv((int)MathF.Floor(world.Y), Balance.TileSize);
         if (_generator.BlocksMovement(tx, ty)) return true;
-        return _state.PlacedBlocks.ContainsKey(BlockKey(tx, ty));
+        if (_state.PlacedBlocks.ContainsKey(BlockKey(tx, ty))) return true;
+        var coord = new ChunkCoord(MathTools.FloorDiv(tx, Balance.ChunkSize), MathTools.FloorDiv(ty, Balance.ChunkSize));
+        if (_chunks.TryGetValue(coord, out var chunk))
+        {
+            foreach (var decoration in chunk.Decorations)
+            {
+                if (decoration.BlocksMovement && decoration.Bounds.Contains(world)) return true;
+            }
+        }
+        return false;
     }
 
     public bool CanPlaceBlock(int tileX, int tileY)
@@ -73,7 +82,10 @@ public sealed class ChunkManager
         var key = BlockKey(tileX, tileY);
         if (_state.PlacedBlocks.ContainsKey(key)) return false;
         var tile = TileAt(tileX, tileY);
-        return tile != TileType.Water && tile != TileType.BuildingWall;
+        if (tile == TileType.Water || tile == TileType.BuildingWall) return false;
+        var center = new Vector2((tileX + 0.5f) * Balance.TileSize, (tileY + 0.5f) * Balance.TileSize);
+        if (FindResource(center, 22f) is not null) return false;
+        return true;
     }
 
     public static string BlockKey(int tileX, int tileY) => $"{tileX}:{tileY}";

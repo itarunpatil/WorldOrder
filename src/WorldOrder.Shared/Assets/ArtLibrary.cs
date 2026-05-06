@@ -13,6 +13,12 @@ public enum SpriteId
     PlayerRunSide,
     PlayerIdleUp,
     PlayerRunUp,
+    PlayerPunchDown,
+    PlayerPunchSide,
+    PlayerPunchUp,
+    PlayerPistolDown,
+    PlayerPistolSide,
+    PlayerPistolUp,
     ZombieWalkDown,
     ZombieWalkSide,
     ZombieWalkUp,
@@ -126,6 +132,12 @@ public sealed class ArtLibrary
         loaded += LoadSheet(SpriteId.PlayerRunSide, "Character/Main/Run/Character_side_run-Sheet6.png", 6, 0.09f);
         loaded += LoadSheet(SpriteId.PlayerIdleUp, "Character/Main/Idle/Character_up_idle-Sheet6.png", 6, 0.14f);
         loaded += LoadSheet(SpriteId.PlayerRunUp, "Character/Main/Run/Character_up_run-Sheet6.png", 6, 0.09f);
+        loaded += LoadSheet(SpriteId.PlayerPunchDown, "Character/Main/Punch/Character_down_punch-Sheet4.png", 4, 0.055f);
+        loaded += LoadSheet(SpriteId.PlayerPunchSide, "Character/Main/Punch/Character_side_punch-Sheet4.png", 4, 0.055f);
+        loaded += LoadSheet(SpriteId.PlayerPunchUp, "Character/Main/Punch/Character_up_punch-Sheet4.png", 4, 0.055f);
+        loaded += LoadSheet(SpriteId.PlayerPistolDown, "Character/Guns/Pistol/Pistol_down_shoot-Sheet3.png", 3, 0.050f);
+        loaded += LoadSheet(SpriteId.PlayerPistolSide, "Character/Guns/Pistol/Pistol_side_shoot-Sheet3.png", 3, 0.050f);
+        loaded += LoadSheet(SpriteId.PlayerPistolUp, "Character/Guns/Pistol/Pistol_up_shoot-Sheet3.png", 3, 0.050f);
         loaded += LoadSheet(SpriteId.ZombieWalkDown, "Enemies/Zombie_Small/Zombie_Small_Down_walk-Sheet6.png", 6, 0.12f);
         loaded += LoadSheet(SpriteId.ZombieWalkSide, "Enemies/Zombie_Small/Zombie_Small_Side_Walk-Sheet6.png", 6, 0.12f);
         loaded += LoadSheet(SpriteId.ZombieWalkUp, "Enemies/Zombie_Small/Zombie_Small_Up_Walk-Sheet6.png", 6, 0.12f);
@@ -198,21 +210,23 @@ public sealed class ArtLibrary
         loaded += LoadTexture("icon_woodwall", "UI/Inventory/Objects/Icon_Wooden-wall.png");
         loaded += LoadTexture("icon_reinforced", "UI/Inventory/Objects/Icon_Reinforced-wooden-wall.png");
         loaded += LoadTexture("icon_rock", "UI/Inventory/Objects/Icon_Rock.png");
+        loaded += LoadTexture("icon_scrap", "Objects/Vehicles/Normal/Car_6_Scrap/Car_6_Gray_Scrap.png");
+        loaded += LoadTexture("icon_cloth", "Objects/Cardboard_2.png");
 
         // Phase 4: use only clean base tiles for terrain. Road stripes, crosswalks, curbs,
         // and ruin detail are renderer/decorator overlays, never random ground variants.
         loaded += ReplaceTileFromSheet(TileType.DryGrass, "Tiles/Background_Green_TileSet.png", 0, 0);
-        loaded += AddTileVariantFromSheet(TileType.DryGrass, "Tiles/Background_Green_TileSet.png", 1, 0);
+        loaded += AddTileVariantFromSheet(TileType.DryGrass, "Tiles/Background_Green_TileSet.png", 2, 0);
         loaded += ReplaceTileFromSheet(TileType.Dirt, "Tiles/Background_Bleak-Yellow_TileSet.png", 0, 0);
         loaded += AddTileVariantFromSheet(TileType.Dirt, "Tiles/Background_Bleak-Yellow_TileSet.png", 1, 0);
-        loaded += ReplaceTileFromSheet(TileType.Rubble, "Tiles/Garbage_TileSet.png", 0, 0);
-        loaded += AddTileVariantFromSheet(TileType.Rubble, "Tiles/Garbage_TileSet.png", 4, 0);
+        loaded += ReplaceTileFromSheet(TileType.Rubble, "Tiles/Garbage_TileSet.png", 2, 0);
+        loaded += AddTileVariantFromSheet(TileType.Rubble, "Tiles/Garbage_TileSet.png", 1, 0);
         loaded += ReplaceTileFromSheet(TileType.Asphalt, "Tiles/Background_Green_TileSet.png", 0, 7);
-        loaded += ReplaceTileFromSheet(TileType.Pavement, "Tiles/Background_Bleak-Yellow_TileSet.png", 0, 0);
-        loaded += AddTileVariantFromSheet(TileType.Pavement, "Tiles/Background_Bleak-Yellow_TileSet.png", 1, 0);
+        loaded += ReplaceTileFromSheet(TileType.Pavement, "Tiles/Background_Green_TileSet.png", 1, 1);
         loaded += ReplaceTileFromSheet(TileType.BuildingFloor, "Tiles/Buildings/Buildings_gray_TileSet.png", 7, 4);
         loaded += AddTileVariantFromSheet(TileType.BuildingFloor, "Tiles/Buildings/Buildings_gray_TileSet.png", 8, 4);
         loaded += ReplaceTileFromSheet(TileType.BuildingWall, "Tiles/Brick-Wall_TileSet.png", 0, 0);
+        loaded += AddTileVariantFromSheet(TileType.BuildingWall, "Tiles/Brick-Wall_TileSet.png", 5, 0);
 
         ExternalArtLoaded = loaded > 0;
     }

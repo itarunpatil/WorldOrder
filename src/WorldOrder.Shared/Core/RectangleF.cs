@@ -27,6 +27,11 @@ public readonly struct RectangleF
         return other.Left < Right && Left < other.Right && other.Top < Bottom && Top < other.Bottom;
     }
 
+    public bool Contains(Vector2 point)
+    {
+        return point.X >= Left && point.X <= Right && point.Y >= Top && point.Y <= Bottom;
+    }
+
     public Rectangle ToRectangle()
     {
         return new Rectangle((int)MathF.Floor(X), (int)MathF.Floor(Y), (int)MathF.Ceiling(Width), (int)MathF.Ceiling(Height));

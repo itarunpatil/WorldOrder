@@ -143,3 +143,11 @@ Phase 4 focuses on making the game feel like a coherent survival game instead of
 - Zombie death now drops loot into the world instead of silently adding it to inventory.
 - Build mode has a green/red placement preview so the player can understand range and blockage before spending materials.
 - Game-over state now freezes simulation updates and shows a clear death banner.
+
+## Phase 5 production pass
+
+- Runtime world generation now uses hand-authored selectable maps from `WorldMapCatalog` instead of the earlier noisy open-world generator.
+- Keep new maps authored, named, and reviewed; do not reintroduce random tile-noise as the primary gameplay map path.
+- Inventory/hotbar UI must show real player-owned item stacks; empty slots stay empty.
+- Android world naming must use platform keyboard input, not an in-game keyboard.
+- Main menu must remain centered, clean, and free from asset-debug/status text.

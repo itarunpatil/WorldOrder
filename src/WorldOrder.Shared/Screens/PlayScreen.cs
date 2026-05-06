@@ -24,7 +24,7 @@ public sealed class PlayScreen : GameScreen
     public override void Update(GameTime gameTime)
     {
         var viewport = Game.GraphicsDevice.Viewport.Bounds;
-        for (var i = 0; i < Inventory.HotbarOrder.Length; i++)
+        for (var i = 0; i < Inventory.HotbarCapacity; i++)
         {
             if (Game.Input.Tapped(HudRenderer.HotbarSlotRect(viewport, i)))
             {

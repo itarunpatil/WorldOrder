@@ -11,6 +11,7 @@ public sealed class WorldSaveInfo
     public required string WorldId { get; init; }
     public required string Name { get; init; }
     public int Seed { get; init; }
+    public string MapId { get; init; } = WorldMapCatalog.DefaultMapId;
     public int Day { get; init; }
     public DateTimeOffset LastSavedUtc { get; init; }
     public required string Folder { get; init; }
@@ -41,6 +42,7 @@ public static class WorldSaveSystem
                     WorldId = state.WorldId,
                     Name = state.WorldName,
                     Seed = state.Seed,
+                    MapId = string.IsNullOrWhiteSpace(state.MapId) ? WorldMapCatalog.DefaultMapId : state.MapId,
                     Day = state.Day,
                     LastSavedUtc = state.LastSavedUtc,
                     Folder = dir
@@ -54,7 +56,7 @@ public static class WorldSaveSystem
         return saves.OrderByDescending(s => s.LastSavedUtc).ToList();
     }
 
-    public static WorldState CreateNew(string name, int seed)
+    public static WorldState CreateNew(string name, int seed, string mapId = WorldMapCatalog.DefaultMapId)
     {
         var id = Guid.NewGuid().ToString("N");
         return new WorldState
@@ -62,7 +64,8 @@ public static class WorldSaveSystem
             WorldId = id,
             WorldName = string.IsNullOrWhiteSpace(name) ? "WORLD" : name.Trim(),
             Seed = seed,
-            PlayerPosition = new Vector2(0f, 0f),
+            MapId = string.IsNullOrWhiteSpace(mapId) ? WorldMapCatalog.DefaultMapId : mapId,
+            PlayerPosition = WorldMapCatalog.SpawnFor(mapId),
             Inventory = Inventory.CreateStarter()
         };
     }

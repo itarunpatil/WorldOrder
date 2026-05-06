@@ -34,3 +34,11 @@ Windows and Android are separate workflows. Android uses the committed developme
 `InputState` separates keyboard confirmation from pointer/touch activation. Menu screens must use explicit rectangle hit-testing for pointer activation and `Confirm` only for keyboard/controller-style activation. Do not add mouse/touch back into `InputState.Accept`; that was the source of accidental menu actions when the user clicked elsewhere in the window.
 
 Text fields own their own backspace and escape behavior. `WorldCreateScreen` requests MonoGame `KeyboardInput.Show` on Android and falls back to an in-game keypad when the platform keyboard is unavailable.
+
+## Phase 5 production pass
+
+- Runtime world generation now uses hand-authored selectable maps from `WorldMapCatalog` instead of the earlier noisy open-world generator.
+- Keep new maps authored, named, and reviewed; do not reintroduce random tile-noise as the primary gameplay map path.
+- Inventory/hotbar UI must show real player-owned item stacks; empty slots stay empty.
+- Android world naming must use platform keyboard input, not an in-game keyboard.
+- Main menu must remain centered, clean, and free from asset-debug/status text.

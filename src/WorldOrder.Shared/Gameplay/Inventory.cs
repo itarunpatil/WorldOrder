@@ -23,16 +23,19 @@ public sealed class Inventory
 {
     public List<ItemStack> Items { get; set; } = new();
 
+    public const int HotbarCapacity = 6;
+
     public static readonly ItemId[] HotbarOrder =
     {
-        ItemId.Wood,
-        ItemId.Scrap,
         ItemId.Food,
         ItemId.Water,
         ItemId.Bandage,
-        ItemId.Ammo,
         ItemId.Pistol,
-        ItemId.Cloth
+        ItemId.Ammo,
+        ItemId.Wood,
+        ItemId.Scrap,
+        ItemId.Cloth,
+        ItemId.Stone
     };
 
     public static Inventory CreateStarter()
@@ -47,6 +50,16 @@ public sealed class Inventory
     }
 
     public int Count(ItemId item) => Items.FirstOrDefault(i => i.Item == item)?.Count ?? 0;
+
+    public IReadOnlyList<ItemStack> HotbarItems()
+    {
+        return Items
+            .Where(stack => stack.Count > 0)
+            .OrderBy(stack => Array.IndexOf(HotbarOrder, stack.Item) < 0 ? 999 : Array.IndexOf(HotbarOrder, stack.Item))
+            .ThenBy(stack => stack.Item.ToString(), StringComparer.Ordinal)
+            .Take(HotbarCapacity)
+            .ToList();
+    }
 
     public void Add(ItemId item, int count)
     {

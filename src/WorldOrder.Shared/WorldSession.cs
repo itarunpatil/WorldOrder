@@ -17,7 +17,7 @@ public sealed class WorldSession
     {
         Game = game;
         State = state;
-        Generator = new WorldGenerator(state.Seed);
+        Generator = new WorldGenerator(state.Seed, state.MapId);
         Chunks = new ChunkManager(Generator, state);
         Player = new Player(state.PlayerPosition);
         Entities = new EntityManager();

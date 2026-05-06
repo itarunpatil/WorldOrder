@@ -11,11 +11,10 @@ public sealed class WorldCreateScreen : GameScreen
     private string _name = "ASHFALL";
     private int _seed;
     private bool _editingName = true;
+    private int _selectedMap;
     private Task<string>? _mobileKeyboardTask;
     private string? _keyboardError;
     private float _caretTimer;
-
-    private const string MobileKeyboardRows = "QWERTYUIOP|ASDFGHJKL|ZXCVBNM";
 
     public WorldCreateScreen(GameRoot game) : base(game)
     {
@@ -32,6 +31,14 @@ public sealed class WorldCreateScreen : GameScreen
         {
             _editingName = true;
             RequestMobileKeyboard();
+            return;
+        }
+
+        for (var i = 0; i < WorldMapCatalog.Summaries.Count; i++)
+        {
+            if (!Game.Input.Tapped(MapCardRect(layout, i))) continue;
+            _selectedMap = i;
+            _editingName = false;
             return;
         }
 
@@ -53,8 +60,6 @@ public sealed class WorldCreateScreen : GameScreen
             return;
         }
 
-        if (HandleMobileNamePad(layout)) return;
-
         if (_mobileKeyboardTask is not null && !_mobileKeyboardTask.IsCompleted) return;
 
         if (Game.Input.Escape)
@@ -64,11 +69,9 @@ public sealed class WorldCreateScreen : GameScreen
             return;
         }
 
-        if (Game.Input.Pressed(Keys.Tab))
-        {
-            _editingName = !_editingName;
-            return;
-        }
+        if (Game.Input.Pressed(Keys.Left) || Game.Input.Pressed(Keys.A)) _selectedMap = (_selectedMap - 1 + WorldMapCatalog.Summaries.Count) % WorldMapCatalog.Summaries.Count;
+        if (Game.Input.Pressed(Keys.Right) || Game.Input.Pressed(Keys.D)) _selectedMap = (_selectedMap + 1) % WorldMapCatalog.Summaries.Count;
+        if (Game.Input.Pressed(Keys.Tab)) _editingName = !_editingName;
 
         if (!_editingName)
         {
@@ -100,79 +103,66 @@ public sealed class WorldCreateScreen : GameScreen
         var layout = Layout();
         Game.GraphicsDevice.Clear(Balance.ClearColor);
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
-        Game.Ui.Panel(spriteBatch, layout.Panel, new Color(95, 100, 92), new Color(18, 20, 19, 230));
-        Game.Ui.Label(spriteBatch, "CREATE NEW WORLD", new Vector2(layout.Panel.X + 38, layout.Panel.Y + 38), new Color(236, 220, 150), 5);
-        Game.Ui.Label(spriteBatch, "WORLD NAME", new Vector2(layout.Panel.X + 44, layout.Panel.Y + 135), Color.White, 2);
+        DrawBackground(spriteBatch);
+        Game.Ui.Panel(spriteBatch, layout.Panel, new Color(95, 100, 92), new Color(18, 20, 19, 232));
+        CenterLabel(spriteBatch, "CREATE NEW WORLD", new Rectangle(layout.Panel.X, layout.Panel.Y + 30, layout.Panel.Width, 40), new Color(236, 220, 150), 5);
+
+        Game.Ui.Label(spriteBatch, "WORLD NAME", new Vector2(layout.Panel.X + 38, layout.Panel.Y + 108), Color.White, 2);
         Game.Ui.Panel(spriteBatch, layout.NameBox, _editingName ? new Color(227, 190, 88) : new Color(90, 94, 88), new Color(10, 12, 12, 230));
-        var caret = _editingName && (_caretTimer % 1f) < 0.55f && (_mobileKeyboardTask is null || _mobileKeyboardTask.IsCompleted) ? ">" : string.Empty;
+        var caret = _editingName && (_caretTimer % 1f) < 0.55f && (_mobileKeyboardTask is null || _mobileKeyboardTask.IsCompleted) ? "_" : string.Empty;
         Game.Ui.Label(spriteBatch, _name + caret, new Vector2(layout.NameBox.X + 14, layout.NameBox.Y + 16), new Color(230, 235, 218), 2);
 
-        Game.Ui.Label(spriteBatch, "SEED", new Vector2(layout.Panel.X + 44, layout.Panel.Y + 248), Color.White, 2);
-        Game.Ui.Label(spriteBatch, _seed.ToString(), new Vector2(layout.Panel.X + 44, layout.Panel.Y + 280), new Color(200, 207, 194), 2);
-        Game.Ui.Button(spriteBatch, layout.Back, "BACK", false);
-        Game.Ui.Button(spriteBatch, layout.Random, "RANDOM", false);
-        Game.Ui.Button(spriteBatch, layout.Create, "CREATE", true);
+        Game.Ui.Label(spriteBatch, "SELECT MAP", new Vector2(layout.Panel.X + 38, layout.Panel.Y + 190), Color.White, 2);
+        for (var i = 0; i < WorldMapCatalog.Summaries.Count; i++) DrawMapCard(spriteBatch, layout, i);
 
-        if (OperatingSystem.IsAndroid() || Game.Input.HasTouch)
-        {
-            var line = _mobileKeyboardTask is not null && !_mobileKeyboardTask.IsCompleted ? "SYSTEM KEYBOARD OPEN" : "TAP NAME TO OPEN KEYBOARD, OR USE QUICK KEYS BELOW";
-            Game.Ui.Label(spriteBatch, line, new Vector2(layout.Panel.X + 44, layout.Panel.Bottom + 14), new Color(194, 202, 188), 2);
-            if (!string.IsNullOrWhiteSpace(_keyboardError)) Game.Ui.Label(spriteBatch, _keyboardError, new Vector2(layout.Panel.X + 44, layout.Panel.Bottom + 42), new Color(232, 120, 100), 1);
-            DrawMobileNamePad(spriteBatch, layout);
-        }
-        else
-        {
-            Game.Ui.Label(spriteBatch, _editingName ? "TYPE NAME  BACKSPACE DELETE  ENTER DONE  ESC UNFOCUS" : "TAB EDIT NAME  R RANDOMIZE  ENTER CREATE  ESC BACK", new Vector2(layout.Panel.X + 44, layout.Panel.Bottom + 14), new Color(194, 202, 188), 2);
-        }
+        Game.Ui.Label(spriteBatch, $"SEED {_seed}", new Vector2(layout.Panel.X + 38, layout.Panel.Y + 442), new Color(200, 207, 194), 2);
+        if (!string.IsNullOrWhiteSpace(_keyboardError)) Game.Ui.Label(spriteBatch, _keyboardError, new Vector2(layout.Panel.X + 38, layout.Panel.Y + 468), new Color(232, 120, 100), 1);
+
+        Game.Ui.Button(spriteBatch, layout.Back, "BACK", false);
+        Game.Ui.Button(spriteBatch, layout.Random, "RANDOM SEED", false);
+        Game.Ui.Button(spriteBatch, layout.Create, "CREATE", true);
         spriteBatch.End();
     }
 
-    private bool HandleMobileNamePad(ScreenLayout layout)
+    private void DrawBackground(SpriteBatch batch)
     {
-        if (!(OperatingSystem.IsAndroid() || Game.Input.HasTouch)) return false;
-        foreach (var key in MobileKeys(layout))
+        var vp = Game.GraphicsDevice.Viewport.Bounds;
+        batch.Draw(Game.Art.Pixel, vp, new Color(13, 17, 16));
+        for (var y = 0; y < vp.Height; y += 32)
         {
-            if (!Game.Input.Tapped(key.Rect)) continue;
-            _editingName = true;
-            switch (key.Text)
+            for (var x = 0; x < vp.Width; x += 32)
             {
-                case "DEL": RemoveLastCharacter(); break;
-                case "SPACE": AppendCharacter(' '); break;
-                default: AppendCharacter(key.Text[0]); break;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    private void DrawMobileNamePad(SpriteBatch spriteBatch, ScreenLayout layout)
-    {
-        foreach (var key in MobileKeys(layout))
-        {
-            Game.Ui.Button(spriteBatch, key.Rect, key.Text, false);
-        }
-    }
-
-    private IEnumerable<MobileKey> MobileKeys(ScreenLayout layout)
-    {
-        var viewport = Game.GraphicsDevice.Viewport.Bounds;
-        var keyW = Math.Clamp(viewport.Width / 18, 44, 64);
-        var keyH = 38;
-        var gap = 6;
-        var startY = Math.Min(layout.Panel.Bottom + 74, viewport.Height - 156);
-        var rows = MobileKeyboardRows.Split('|');
-        for (var row = 0; row < rows.Length; row++)
-        {
-            var text = rows[row];
-            var rowWidth = text.Length * keyW + (text.Length - 1) * gap;
-            var x = viewport.Width / 2 - rowWidth / 2;
-            for (var i = 0; i < text.Length; i++)
-            {
-                yield return new MobileKey(text[i].ToString(), new Rectangle(x + i * (keyW + gap), startY + row * (keyH + gap), keyW, keyH));
+                var tile = ((x / 32 + y / 32) % 7) == 0 ? TileType.DryGrass : ((x / 32 + y / 32) % 11) == 0 ? TileType.Rubble : TileType.Asphalt;
+                batch.Draw(Game.Art.Tile(tile, x / 32, y / 32), new Rectangle(x, y, 32, 32), Color.White * 0.14f);
             }
         }
-        yield return new MobileKey("DEL", new Rectangle(viewport.Width / 2 - 170, startY + 3 * (keyH + gap), 96, keyH));
-        yield return new MobileKey("SPACE", new Rectangle(viewport.Width / 2 - 62, startY + 3 * (keyH + gap), 170, keyH));
+        batch.Draw(Game.Art.Pixel, vp, Color.Black * 0.35f);
+    }
+
+    private void DrawMapCard(SpriteBatch batch, ScreenLayout layout, int index)
+    {
+        var summary = WorldMapCatalog.Summaries[index];
+        var rect = MapCardRect(layout, index);
+        var selected = index == _selectedMap;
+        Game.Ui.Panel(batch, rect, selected ? new Color(236, 202, 94) : new Color(92, 98, 91), selected ? new Color(43, 40, 31, 230) : new Color(20, 23, 22, 220));
+        Game.Ui.Label(batch, summary.Name, new Vector2(rect.X + 14, rect.Y + 14), selected ? new Color(248, 238, 170) : new Color(212, 218, 204), 2);
+        var line1 = summary.Description.Length > 44 ? summary.Description[..44] : summary.Description;
+        var line2 = summary.Description.Length > 44 ? summary.Description[44..Math.Min(summary.Description.Length, 88)] : string.Empty;
+        Game.Ui.Label(batch, line1.ToUpperInvariant(), new Vector2(rect.X + 14, rect.Y + 46), new Color(175, 186, 172), 1);
+        if (!string.IsNullOrWhiteSpace(line2)) Game.Ui.Label(batch, line2.ToUpperInvariant(), new Vector2(rect.X + 14, rect.Y + 64), new Color(175, 186, 172), 1);
+    }
+
+    private Rectangle MapCardRect(ScreenLayout layout, int index)
+    {
+        var x = layout.Panel.X + 38 + index * ((layout.Panel.Width - 76) / 3);
+        var w = (layout.Panel.Width - 96) / 3;
+        return new Rectangle(x, layout.Panel.Y + 222, w, 144);
+    }
+
+    private void CenterLabel(SpriteBatch batch, string text, Rectangle rect, Color color, int scale)
+    {
+        var size = Game.Font.Measure(text, scale);
+        Game.Font.DrawShadow(batch, text, new Vector2(rect.Center.X - size.X * 0.5f, rect.Center.Y - size.Y * 0.5f), color, scale);
     }
 
     private void RequestMobileKeyboard()
@@ -214,7 +204,7 @@ public sealed class WorldCreateScreen : GameScreen
     {
         if (_name.Length >= 18) return;
         if (!(char.IsLetterOrDigit(ch) || ch == ' ' || ch == '-' || ch == '_')) return;
-        _name = (_name + char.ToUpperInvariant(ch));
+        _name = _name + char.ToUpperInvariant(ch);
     }
 
     private void RemoveLastCharacter()
@@ -224,22 +214,23 @@ public sealed class WorldCreateScreen : GameScreen
 
     private void CreateWorld()
     {
-        var state = WorldSaveSystem.CreateNew(_name, _seed);
+        var mapId = WorldMapCatalog.Summaries[_selectedMap].Id;
+        var state = WorldSaveSystem.CreateNew(CleanName(_name), _seed, mapId);
         Game.Screens.Change(new LoadingScreen(Game, state, null));
     }
 
     private ScreenLayout Layout()
     {
         var viewport = Game.GraphicsDevice.Viewport.Bounds;
-        var panelW = Math.Min(760, viewport.Width - 80);
-        var panelH = 430;
-        var panel = new Rectangle(viewport.Width / 2 - panelW / 2, 78, panelW, panelH);
-        var left = panel.X + 44;
-        var nameBox = new Rectangle(left, panel.Y + 166, Math.Min(500, panel.Width - 88), 52);
-        var back = new Rectangle(left, panel.Y + 352, 160, 48);
-        var random = new Rectangle(back.Right + 20, back.Y, 210, 48);
-        var create = new Rectangle(random.Right + 20, back.Y, 230, 48);
-        if (create.Right > panel.Right - 32) create = new Rectangle(panel.Right - 292, back.Y, 260, 48);
+        var panelW = Math.Min(1030, viewport.Width - 80);
+        var panelH = Math.Min(620, viewport.Height - 70);
+        var panel = new Rectangle(viewport.Width / 2 - panelW / 2, Math.Max(34, viewport.Height / 2 - panelH / 2), panelW, panelH);
+        var left = panel.X + 38;
+        var nameBox = new Rectangle(left, panel.Y + 134, Math.Min(520, panel.Width - 76), 52);
+        var buttonY = panel.Bottom - 82;
+        var back = new Rectangle(left, buttonY, 160, 48);
+        var random = new Rectangle(back.Right + 20, buttonY, 250, 48);
+        var create = new Rectangle(panel.Right - 268, buttonY, 230, 48);
         return new ScreenLayout(panel, nameBox, back, random, create);
     }
 
@@ -261,5 +252,4 @@ public sealed class WorldCreateScreen : GameScreen
     }
 
     private readonly record struct ScreenLayout(Rectangle Panel, Rectangle NameBox, Rectangle Back, Rectangle Random, Rectangle Create);
-    private readonly record struct MobileKey(string Text, Rectangle Rect);
 }

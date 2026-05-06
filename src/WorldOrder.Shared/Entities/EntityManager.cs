@@ -50,9 +50,9 @@ public sealed class EntityManager
         for (var i = 0; i < count; i++)
         {
             if (ZombieCount >= Balance.ZombieSoftCap) return;
-            var angle = Hashing.Unit(seed, i, 123) * MathF.Tau;
-            var distance = 720f + Hashing.Unit(seed, i, 321) * 420f;
-            var pos = session.Player.Position + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * distance;
+            var pos = session.Generator.NextZombieSpawn(session.Player.Position, seed + i * 31);
+            pos += new Vector2((Hashing.Unit(seed, i, 123) - 0.5f) * 64f, (Hashing.Unit(seed, i, 321) - 0.5f) * 64f);
+            if (session.Chunks.IsBlocked(pos)) pos = session.Generator.NextZombieSpawn(session.Player.Position, seed + i * 101);
             if (session.Chunks.IsBlocked(pos)) continue;
             var tier = Hashing.Unit(seed, i, 777) > 0.88f ? ZombieTier.Brute : ZombieTier.Walker;
             Add(new Zombie(pos, tier));

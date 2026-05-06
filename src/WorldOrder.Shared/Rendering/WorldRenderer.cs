@@ -207,7 +207,15 @@ public sealed class WorldRenderer
     {
         var player = session.Player;
         var id = SpriteId.PlayerIdleDown;
-        if (Math.Abs(player.Facing.X) > Math.Abs(player.Facing.Y)) id = player.IsMoving ? SpriteId.PlayerRunSide : SpriteId.PlayerIdleSide;
+        var aimingSide = Math.Abs(player.Facing.X) > Math.Abs(player.Facing.Y);
+        var armedPistol = player.IsAttacking && session.State.Inventory.Count(ItemId.Pistol) > 0;
+        if (player.IsAttacking)
+        {
+            if (aimingSide) id = armedPistol ? SpriteId.PlayerPistolSide : SpriteId.PlayerPunchSide;
+            else if (player.Facing.Y < 0f) id = armedPistol ? SpriteId.PlayerPistolUp : SpriteId.PlayerPunchUp;
+            else id = armedPistol ? SpriteId.PlayerPistolDown : SpriteId.PlayerPunchDown;
+        }
+        else if (aimingSide) id = player.IsMoving ? SpriteId.PlayerRunSide : SpriteId.PlayerIdleSide;
         else if (player.Facing.Y < 0f) id = player.IsMoving ? SpriteId.PlayerRunUp : SpriteId.PlayerIdleUp;
         else id = player.IsMoving ? SpriteId.PlayerRunDown : SpriteId.PlayerIdleDown;
         var flip = player.Facing.X < 0f;

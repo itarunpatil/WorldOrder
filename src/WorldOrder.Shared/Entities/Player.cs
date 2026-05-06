@@ -73,7 +73,7 @@ public sealed class Player : Entity
         {
             if (!input.Pressed(keys[i])) continue;
             if (session.BuildMode && i < GameDefinitions.Buildables.Length) session.SelectedBuildableIndex = i;
-            else if (i < Inventory.HotbarOrder.Length) session.SelectedHotbarIndex = i;
+            else if (i < Inventory.HotbarCapacity) session.SelectedHotbarIndex = i;
         }
     }
 

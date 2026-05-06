@@ -74,3 +74,11 @@ World Order is a modular C# MonoGame post-apocalypse zombie survival game. It mu
 - No broken saves after schema changes.
 - No frame-wide iteration over unloaded world data.
 - No platform-specific API usage in shared code unless guarded and documented.
+
+## Phase 5 production pass
+
+- Runtime world generation now uses hand-authored selectable maps from `WorldMapCatalog` instead of the earlier noisy open-world generator.
+- Keep new maps authored, named, and reviewed; do not reintroduce random tile-noise as the primary gameplay map path.
+- Inventory/hotbar UI must show real player-owned item stacks; empty slots stay empty.
+- Android world naming must use platform keyboard input, not an in-game keyboard.
+- Main menu must remain centered, clean, and free from asset-debug/status text.

@@ -62,7 +62,8 @@ public sealed class WorldLoadScreen : GameScreen
                 var selected = i == _selected;
                 var rect = SaveRect(i);
                 Game.Ui.Panel(spriteBatch, rect, selected ? new Color(225, 188, 80) : new Color(82, 86, 80), selected ? new Color(50, 48, 36, 235) : new Color(24, 26, 25, 220));
-                Game.Ui.Label(spriteBatch, $"{save.Name}  DAY {save.Day}  SEED {save.Seed}", new Vector2(rect.X + 14, rect.Y + 13), Color.White, 2);
+                var map = WorldMapCatalog.Summary(save.MapId).Name;
+                Game.Ui.Label(spriteBatch, $"{save.Name}  DAY {save.Day}  {map}", new Vector2(rect.X + 14, rect.Y + 13), Color.White, 2);
             }
         }
         Game.Ui.Button(spriteBatch, layout.Back, "BACK", false);

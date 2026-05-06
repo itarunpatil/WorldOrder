@@ -24,6 +24,7 @@ public sealed class WorldState
     public string WorldId { get; set; } = Guid.NewGuid().ToString("N");
     public string WorldName { get; set; } = "World";
     public int Seed { get; set; }
+    public string MapId { get; set; } = WorldMapCatalog.DefaultMapId;
     public float WorldTimeSeconds { get; set; } = 300f;
     public int Day { get; set; } = 1;
     public Vector2 PlayerPosition { get; set; } = new(0f, 0f);

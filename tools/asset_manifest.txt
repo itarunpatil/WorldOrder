@@ -80,3 +80,5 @@ UI/Inventory/Objects/Icon_Bullet-box_Green.png
 UI/Inventory/Objects/Icon_Pistol.png
 UI/Inventory/Objects/Icon_Reinforced-wooden-wall.png
 UI/Inventory/Objects/Icon_Rock.png
+
+Phase 5 authored-map systems additionally use Character/Main/Punch and Character/Guns/Pistol shoot sheets for real player attack animations. Authored maps use the existing object, vehicle, nature, building, menu, HP, hunger, and inventory assets already integrated in GameAssets/PostApocalypse.
