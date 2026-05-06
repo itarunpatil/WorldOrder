@@ -17,22 +17,30 @@ public sealed class SimpleTextScreen : GameScreen
 
     public override void Update(GameTime gameTime)
     {
-        if (Game.Input.Cancel || Game.Input.TouchPressed || Game.Input.LeftClick) Game.Screens.Change(new MainMenuScreen(Game));
+        var back = BackRect();
+        if (Game.Input.Escape || Game.Input.Tapped(back)) Game.Screens.Change(new MainMenuScreen(Game));
     }
 
     public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
     {
         Game.GraphicsDevice.Clear(Balance.ClearColor);
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
-        Game.Ui.Panel(spriteBatch, new Rectangle(90, 80, Game.GraphicsDevice.Viewport.Width - 180, Game.GraphicsDevice.Viewport.Height - 160), new Color(92, 96, 90), new Color(18, 20, 20, 230));
-        Game.Ui.Label(spriteBatch, _title, new Vector2(124, 116), new Color(235, 219, 148), 5);
-        var y = 210;
+        var panel = new Rectangle(90, 80, Game.GraphicsDevice.Viewport.Width - 180, Game.GraphicsDevice.Viewport.Height - 160);
+        Game.Ui.Panel(spriteBatch, panel, new Color(92, 96, 90), new Color(18, 20, 20, 230));
+        Game.Ui.Label(spriteBatch, _title, new Vector2(panel.X + 34, panel.Y + 36), new Color(235, 219, 148), 5);
+        var y = panel.Y + 130;
         foreach (var line in _body.Split('\n'))
         {
-            Game.Ui.Label(spriteBatch, line, new Vector2(124, y), new Color(210, 216, 204), 2);
+            Game.Ui.Label(spriteBatch, line, new Vector2(panel.X + 34, y), new Color(210, 216, 204), 2);
             y += 34;
         }
-        Game.Ui.Label(spriteBatch, "TAP / ESC TO RETURN", new Vector2(124, Game.GraphicsDevice.Viewport.Height - 122), new Color(188, 198, 184), 2);
+        Game.Ui.Button(spriteBatch, BackRect(), "BACK", false);
         spriteBatch.End();
+    }
+
+    private Rectangle BackRect()
+    {
+        var viewport = Game.GraphicsDevice.Viewport.Bounds;
+        return new Rectangle(124, viewport.Height - 122, 180, 44);
     }
 }

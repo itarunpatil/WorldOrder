@@ -29,6 +29,7 @@ public sealed class WorldRenderer
                 var tile = session.Chunks.TileAt(tx, ty);
                 var dest = new Rectangle(tx * Balance.TileSize, ty * Balance.TileSize, Balance.TileSize, Balance.TileSize);
                 batch.Draw(_game.Art.Tile(tile, tx, ty), dest, Color.White);
+                if (tile == TileType.Asphalt) DrawRoadMarking(batch, session, tx, ty, dest);
             }
         }
 
@@ -73,24 +74,58 @@ public sealed class WorldRenderer
         DrawNightOverlay(batch, session);
     }
 
+
+    private void DrawRoadMarking(SpriteBatch batch, WorldSession session, int tileX, int tileY, Rectangle dest)
+    {
+        var marking = session.Generator.RoadMarkingAt(tileX, tileY);
+        if (marking == RoadMarking.None) return;
+        var paint = new Color(214, 214, 204) * 0.62f;
+        switch (marking)
+        {
+            case RoadMarking.HorizontalLane:
+                batch.Draw(_game.Art.Pixel, new Rectangle(dest.X + 7, dest.Y + 14, 18, 4), paint);
+                break;
+            case RoadMarking.VerticalLane:
+                batch.Draw(_game.Art.Pixel, new Rectangle(dest.X + 14, dest.Y + 7, 4, 18), paint);
+                break;
+            case RoadMarking.CrosswalkHorizontal:
+                batch.Draw(_game.Art.Pixel, new Rectangle(dest.X + 2, dest.Y + 6, 28, 5), paint * 0.85f);
+                batch.Draw(_game.Art.Pixel, new Rectangle(dest.X + 2, dest.Y + 21, 28, 5), paint * 0.85f);
+                break;
+            case RoadMarking.CrosswalkVertical:
+                batch.Draw(_game.Art.Pixel, new Rectangle(dest.X + 6, dest.Y + 2, 5, 28), paint * 0.85f);
+                batch.Draw(_game.Art.Pixel, new Rectangle(dest.X + 21, dest.Y + 2, 5, 28), paint * 0.85f);
+                break;
+        }
+    }
+
+    private Texture2D TextureByHash(Vector2 position, params string[] keys)
+    {
+        if (keys.Length == 0) return _game.Art.Texture("crate");
+        var x = MathTools.FloorDiv((int)MathF.Floor(position.X), 8);
+        var y = MathTools.FloorDiv((int)MathF.Floor(position.Y), 8);
+        var index = (int)(Hashing.Hash2(x, y, 220133) % (uint)keys.Length);
+        return _game.Art.Texture(keys[index]);
+    }
+
     private void DrawDecoration(SpriteBatch batch, DecorationNode decoration, Rectangle bounds)
     {
         var texture = decoration.Kind switch
         {
-            DecorationKind.GrassTuft => _game.Art.Texture(decoration.Id.GetHashCode() % 2 == 0 ? "grass1" : "grass2"),
-            DecorationKind.Bush => _game.Art.Texture("bush"),
+            DecorationKind.GrassTuft => TextureByHash(decoration.Position, "grass1", "grass2", "grass3"),
+            DecorationKind.Bush => TextureByHash(decoration.Position, "bush", "bush2"),
             DecorationKind.TireStack => _game.Art.Texture("tires"),
-            DecorationKind.Cardboard => _game.Art.Texture("cardboard"),
-            DecorationKind.GarbageBin => _game.Art.Texture("garbagebin"),
-            DecorationKind.Hydrant => _game.Art.Texture("hydrant"),
+            DecorationKind.Cardboard => TextureByHash(decoration.Position, "cardboard", "cardboard2"),
+            DecorationKind.GarbageBin => TextureByHash(decoration.Position, "garbagebin", "garbagebin2"),
+            DecorationKind.Hydrant => TextureByHash(decoration.Position, "hydrant", "hydrant2"),
             DecorationKind.Manhole => _game.Art.Texture("manhole"),
-            DecorationKind.Bench => _game.Art.Texture("bench"),
-            DecorationKind.Container => _game.Art.Texture("container"),
-            DecorationKind.AirVent => _game.Art.Texture("airvent"),
-            DecorationKind.Door => _game.Art.Texture("door"),
-            DecorationKind.DestroyedWall => _game.Art.Texture("destroyedwall"),
-            DecorationKind.BrickDebris => _game.Art.Texture("brickdebris"),
-            DecorationKind.RoofHole => _game.Art.Texture("roofhole"),
+            DecorationKind.Bench => TextureByHash(decoration.Position, "bench", "bench2"),
+            DecorationKind.Container => TextureByHash(decoration.Position, "container", "container2", "container3"),
+            DecorationKind.AirVent => TextureByHash(decoration.Position, "airvent", "airvent2"),
+            DecorationKind.Door => TextureByHash(decoration.Position, "door", "door2", "poster"),
+            DecorationKind.DestroyedWall => TextureByHash(decoration.Position, "destroyedwall", "destroyedwall2"),
+            DecorationKind.BrickDebris => TextureByHash(decoration.Position, "brickdebris", "metalplates"),
+            DecorationKind.RoofHole => TextureByHash(decoration.Position, "roofhole", "roofhole2"),
             DecorationKind.Fence => _game.Art.Texture("fence"),
             _ => _game.Art.Texture("crate")
         };
@@ -111,9 +146,9 @@ public sealed class WorldRenderer
     {
         var texture = node.Kind switch
         {
-            ResourceKind.Tree => _game.Art.Texture("tree"),
-            ResourceKind.WreckedCar => _game.Art.Texture("car"),
-            ResourceKind.Barrel => _game.Art.Texture("barrel"),
+            ResourceKind.Tree => TextureByHash(node.Position, "tree", "tree2", "tree3"),
+            ResourceKind.WreckedCar => TextureByHash(node.Position, "car", "car2", "car3", "truck"),
+            ResourceKind.Barrel => TextureByHash(node.Position, "barrel", "barrel2"),
             ResourceKind.FoodCache => _game.Art.Texture("food"),
             ResourceKind.WaterCache => _game.Art.Texture("water"),
             ResourceKind.MedicalCache => _game.Art.Texture("medkit"),

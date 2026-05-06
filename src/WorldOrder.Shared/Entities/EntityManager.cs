@@ -7,7 +7,7 @@ namespace WorldOrder.Entities;
 public sealed class EntityManager
 {
     private readonly List<Entity> _entities = new();
-    private float _spawnTimer;
+    private float _spawnTimer = 24f;
 
     public IEnumerable<Entity> All => _entities;
     public IEnumerable<Zombie> Zombies => _entities.OfType<Zombie>();
@@ -45,12 +45,13 @@ public sealed class EntityManager
     {
         if (ZombieCount >= Balance.ZombieSoftCap) return;
         var seed = session.State.Seed + session.State.Day * 997 + (int)session.State.WorldTimeSeconds;
-        var count = 1 + (session.State.Day / 3);
+        if (session.State.Day == 1 && session.State.WorldTimeSeconds < 360f) return;
+        var count = 1 + Math.Max(0, session.State.Day - 1) / 3;
         for (var i = 0; i < count; i++)
         {
             if (ZombieCount >= Balance.ZombieSoftCap) return;
             var angle = Hashing.Unit(seed, i, 123) * MathF.Tau;
-            var distance = 520f + Hashing.Unit(seed, i, 321) * 360f;
+            var distance = 720f + Hashing.Unit(seed, i, 321) * 420f;
             var pos = session.Player.Position + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * distance;
             if (session.Chunks.IsBlocked(pos)) continue;
             var tier = Hashing.Unit(seed, i, 777) > 0.88f ? ZombieTier.Brute : ZombieTier.Walker;

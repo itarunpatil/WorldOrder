@@ -38,16 +38,18 @@ public sealed class Player : Entity
 
         MoveWithCollision(session, movement * speed * dt);
 
-        var gatherPressed = input.Pressed(Keys.E) || input.LeftClick || input.Tapped(TouchLayout.Gather(viewport));
-        if (gatherPressed && _useTimer <= 0f)
+        var gatherPressed = input.Pressed(Keys.E) || input.RightClick || input.Tapped(TouchLayout.Gather(viewport));
+        if (gatherPressed && _useTimer <= 0f && !session.BuildMode)
         {
             _useTimer = 0.18f;
+            if (input.RightClick) FacePointer(session);
             session.InteractNearestResource();
         }
 
-        var attackPressed = input.Pressed(Keys.Space) || input.Pressed(Keys.F) || input.RightClick || input.Tapped(TouchLayout.Attack(viewport));
-        if (attackPressed && _attackTimer <= 0f)
+        var attackPressed = input.Pressed(Keys.Space) || input.Pressed(Keys.F) || (input.LeftClick && !session.BuildMode) || input.Tapped(TouchLayout.Attack(viewport));
+        if (attackPressed && _attackTimer <= 0f && !session.BuildMode)
         {
+            if (input.LeftClick) FacePointer(session);
             _attackTimer = Balance.PlayerAttackSeconds;
             session.PlayerAttack();
         }
@@ -60,6 +62,14 @@ public sealed class Player : Entity
         if (input.Pressed(Keys.R)) session.SaveNow();
         if (input.Pressed(Keys.H) || input.Tapped(TouchLayout.Heal(viewport))) ConsumeHealing(session);
         if (input.Pressed(Keys.Q) || input.Tapped(TouchLayout.Eat(viewport))) EatOrDrink(session);
+    }
+
+
+    private void FacePointer(WorldSession session)
+    {
+        var pointer = session.Game.Input.WorldPointer(session.Game.Camera, session.Game.GraphicsDevice);
+        var aim = pointer - Position;
+        if (aim.LengthSquared() > 16f) Facing = MathTools.SafeNormalize(aim);
     }
 
     private void MoveWithCollision(WorldSession session, Vector2 delta)

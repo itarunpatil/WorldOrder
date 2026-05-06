@@ -57,7 +57,7 @@ public sealed class HudRenderer
         }
 
         if (OperatingSystem.IsAndroid() || _game.Input.HasTouch) DrawTouchControls(batch, session, viewport);
-        else ui.Label(batch, "WASD MOVE  SHIFT SPRINT  E GATHER  SPACE ATTACK  B BUILD  Q EAT/DRINK  H HEAL  R SAVE  F11 FULLSCREEN", new Vector2(20, viewport.Height - 22), new Color(200, 205, 197), 1);
+        else ui.Label(batch, "WASD MOVE  SHIFT SPRINT  LEFT CLICK/SPACE ATTACK  RIGHT CLICK/E GATHER  B BUILD  Q EAT/DRINK  H HEAL  R SAVE", new Vector2(20, viewport.Height - 22), new Color(200, 205, 197), 1);
     }
 
     private void DrawTouchControls(SpriteBatch batch, WorldSession session, Rectangle viewport)

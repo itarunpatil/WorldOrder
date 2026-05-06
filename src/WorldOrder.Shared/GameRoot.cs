@@ -73,7 +73,12 @@ public sealed class GameRoot : Game
 
     protected override void Update(GameTime gameTime)
     {
-        Input.Update(GraphicsDevice.Viewport);
+        Input.Update(GraphicsDevice.Viewport, IsActive);
+        if (!IsActive)
+        {
+            base.Update(gameTime);
+            return;
+        }
         if (Input.Pressed(Keys.F11) || (Input.Pressed(Keys.Enter) && (Input.Down(Keys.LeftAlt) || Input.Down(Keys.RightAlt)))) ToggleFullscreen();
         Screens.Update(gameTime);
         base.Update(gameTime);

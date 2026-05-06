@@ -21,6 +21,12 @@ public sealed class MainActivity : AndroidGameActivity
     {
         base.OnCreate(bundle);
         RequestedOrientation = ScreenOrientation.Landscape;
+        Window?.AddFlags(WindowManagerFlags.KeepScreenOn);
+        Window?.SetSoftInputMode(SoftInput.AdjustPan);
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.P && Window is not null)
+        {
+            Window.Attributes.LayoutInDisplayCutoutMode = LayoutInDisplayCutoutMode.ShortEdges;
+        }
         ApplyImmersiveFullscreen();
         _game = new GameRoot();
         var view = (View)_game.Services.GetService(typeof(View))!;
