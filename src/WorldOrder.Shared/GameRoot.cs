@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using WorldOrder.Assets;
 using WorldOrder.Core;
 using WorldOrder.Screens;
@@ -11,6 +12,7 @@ public sealed class GameRoot : Game
 {
     private readonly GraphicsDeviceManager _graphics;
     private SpriteBatch? _spriteBatch;
+    private bool _wasActiveFullscreen;
 
     public GameRoot()
     {
@@ -20,10 +22,14 @@ public sealed class GameRoot : Game
             PreferredBackBufferHeight = Balance.VirtualHeight,
             SynchronizeWithVerticalRetrace = true,
             PreferMultiSampling = false,
-            IsFullScreen = false
+            IsFullScreen = OperatingSystem.IsAndroid(),
+            SupportedOrientations = DisplayOrientation.LandscapeLeft | DisplayOrientation.LandscapeRight
         };
-        IsMouseVisible = true;
+        _graphics.HardwareModeSwitch = false;
+        IsMouseVisible = !OperatingSystem.IsAndroid();
         Window.Title = "World Order";
+        Window.AllowUserResizing = !OperatingSystem.IsAndroid();
+        Window.ClientSizeChanged += (_, _) => Camera.ClampZoom();
         InactiveSleepTime = TimeSpan.FromMilliseconds(50);
     }
 
@@ -36,6 +42,21 @@ public sealed class GameRoot : Game
 
     protected override void Initialize()
     {
+        if (OperatingSystem.IsAndroid())
+        {
+            var display = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+            _graphics.PreferredBackBufferWidth = Math.Max(display.Width, display.Height);
+            _graphics.PreferredBackBufferHeight = Math.Min(display.Width, display.Height);
+            _graphics.IsFullScreen = true;
+            _graphics.ApplyChanges();
+        }
+        else
+        {
+            _graphics.PreferredBackBufferWidth = Balance.VirtualWidth;
+            _graphics.PreferredBackBufferHeight = Balance.VirtualHeight;
+            _graphics.ApplyChanges();
+        }
+
         base.Initialize();
         TouchPanelCapabilities();
     }
@@ -52,7 +73,8 @@ public sealed class GameRoot : Game
 
     protected override void Update(GameTime gameTime)
     {
-        Input.Update();
+        Input.Update(GraphicsDevice.Viewport);
+        if (Input.Pressed(Keys.F11) || (Input.Pressed(Keys.Enter) && (Input.Down(Keys.LeftAlt) || Input.Down(Keys.RightAlt)))) ToggleFullscreen();
         Screens.Update(gameTime);
         base.Update(gameTime);
     }
@@ -61,6 +83,19 @@ public sealed class GameRoot : Game
     {
         Screens.Draw(gameTime, _spriteBatch!);
         base.Draw(gameTime);
+    }
+
+    public void ToggleFullscreen()
+    {
+        if (OperatingSystem.IsAndroid()) return;
+        _wasActiveFullscreen = !_wasActiveFullscreen;
+        _graphics.IsFullScreen = _wasActiveFullscreen;
+        if (!_wasActiveFullscreen)
+        {
+            _graphics.PreferredBackBufferWidth = Balance.VirtualWidth;
+            _graphics.PreferredBackBufferHeight = Balance.VirtualHeight;
+        }
+        _graphics.ApplyChanges();
     }
 
     private static void TouchPanelCapabilities()

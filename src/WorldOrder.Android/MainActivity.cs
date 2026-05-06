@@ -9,8 +9,9 @@ namespace WorldOrder.Android;
 [Activity(
     Label = "World Order",
     MainLauncher = true,
+    Exported = true,
     Theme = "@android:style/Theme.NoTitleBar.Fullscreen",
-    ConfigurationChanges = ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.Orientation | ConfigChanges.ScreenSize,
+    ConfigurationChanges = ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode,
     ScreenOrientation = ScreenOrientation.Landscape)]
 public sealed class MainActivity : AndroidGameActivity
 {
@@ -19,9 +20,34 @@ public sealed class MainActivity : AndroidGameActivity
     protected override void OnCreate(Bundle? bundle)
     {
         base.OnCreate(bundle);
+        RequestedOrientation = ScreenOrientation.Landscape;
+        ApplyImmersiveFullscreen();
         _game = new GameRoot();
         var view = (View)_game.Services.GetService(typeof(View))!;
+        view.Focusable = true;
+        view.FocusableInTouchMode = true;
+        view.RequestFocus();
         SetContentView(view);
         _game.Run();
+    }
+
+    public override void OnWindowFocusChanged(bool hasFocus)
+    {
+        base.OnWindowFocusChanged(hasFocus);
+        if (hasFocus) ApplyImmersiveFullscreen();
+    }
+
+    private void ApplyImmersiveFullscreen()
+    {
+        Window?.SetFlags(WindowManagerFlags.Fullscreen, WindowManagerFlags.Fullscreen);
+        var decorView = Window?.DecorView;
+        if (decorView is null) return;
+        var flags = SystemUiFlags.ImmersiveSticky
+            | SystemUiFlags.Fullscreen
+            | SystemUiFlags.HideNavigation
+            | SystemUiFlags.LayoutFullscreen
+            | SystemUiFlags.LayoutHideNavigation
+            | SystemUiFlags.LayoutStable;
+        decorView.SystemUiVisibility = (StatusBarVisibility)flags;
     }
 }

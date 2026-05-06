@@ -46,4 +46,9 @@ public sealed class Camera2D
     {
         Zoom = MathHelper.Clamp(Zoom + wheelDelta * 0.001f, 1.2f, 3.5f);
     }
+
+    public void ClampZoom()
+    {
+        Zoom = MathHelper.Clamp(Zoom, 1.2f, 3.5f);
+    }
 }

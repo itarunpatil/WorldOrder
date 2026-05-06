@@ -16,12 +16,14 @@ public sealed class Player : Entity
     public Vector2 Facing { get; private set; } = new(0f, 1f);
     public bool IsMoving { get; private set; }
     public bool IsAttacking => _attackTimer > 0f;
+    public float AttackCharge => MathHelper.Clamp(_attackTimer / Balance.PlayerAttackSeconds, 0f, 1f);
     public override RectangleF Bounds => new(Position.X - 9, Position.Y - 9, 18, 18);
 
     public override void Update(WorldSession session, GameTime gameTime)
     {
         var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
         var input = session.Game.Input;
+        var viewport = session.Game.GraphicsDevice.Viewport.Bounds;
         _attackTimer = Math.Max(0f, _attackTimer - dt);
         _useTimer = Math.Max(0f, _useTimer - dt);
 
@@ -36,13 +38,15 @@ public sealed class Player : Entity
 
         MoveWithCollision(session, movement * speed * dt);
 
-        if ((input.Pressed(Keys.E) || input.LeftClick) && _useTimer <= 0f)
+        var gatherPressed = input.Pressed(Keys.E) || input.LeftClick || input.Tapped(TouchLayout.Gather(viewport));
+        if (gatherPressed && _useTimer <= 0f)
         {
             _useTimer = 0.18f;
             session.InteractNearestResource();
         }
 
-        if ((input.Pressed(Keys.Space) || input.Pressed(Keys.F) || input.RightClick) && _attackTimer <= 0f)
+        var attackPressed = input.Pressed(Keys.Space) || input.Pressed(Keys.F) || input.RightClick || input.Tapped(TouchLayout.Attack(viewport));
+        if (attackPressed && _attackTimer <= 0f)
         {
             _attackTimer = Balance.PlayerAttackSeconds;
             session.PlayerAttack();
@@ -52,10 +56,10 @@ public sealed class Player : Entity
         if (input.Pressed(Keys.D2)) session.SelectedBuildableIndex = 1;
         if (input.Pressed(Keys.D3)) session.SelectedBuildableIndex = 2;
         if (input.Pressed(Keys.D4)) session.SelectedBuildableIndex = 3;
-        if (input.Pressed(Keys.B)) session.BuildMode = !session.BuildMode;
+        if (input.Pressed(Keys.B) || input.Tapped(TouchLayout.Build(viewport))) session.BuildMode = !session.BuildMode;
         if (input.Pressed(Keys.R)) session.SaveNow();
-        if (input.Pressed(Keys.H)) ConsumeHealing(session);
-        if (input.Pressed(Keys.Q)) EatOrDrink(session);
+        if (input.Pressed(Keys.H) || input.Tapped(TouchLayout.Heal(viewport))) ConsumeHealing(session);
+        if (input.Pressed(Keys.Q) || input.Tapped(TouchLayout.Eat(viewport))) EatOrDrink(session);
     }
 
     private void MoveWithCollision(WorldSession session, Vector2 delta)
@@ -90,6 +94,10 @@ public sealed class Player : Entity
             vitals.Thirst = Math.Min(100f, vitals.Thirst + 38f);
             session.Log("DRANK WATER");
         }
+        else
+        {
+            session.Log("NO FOOD OR WATER");
+        }
     }
 
     private void ConsumeHealing(WorldSession session)
@@ -99,6 +107,10 @@ public sealed class Player : Entity
             session.State.Vitals.Health = Math.Min(100f, session.State.Vitals.Health + 28f);
             session.State.Vitals.Infection = Math.Max(0f, session.State.Vitals.Infection - 12f);
             session.Log("USED BANDAGE");
+        }
+        else
+        {
+            session.Log("NO BANDAGE");
         }
     }
 }

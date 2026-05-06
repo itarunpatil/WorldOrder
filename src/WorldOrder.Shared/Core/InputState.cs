@@ -13,13 +13,18 @@ public sealed class InputState
     private MouseState _previousMouse;
     private TouchCollection _touches;
     private TouchCollection _previousTouches;
+    private Rectangle _viewport = new(0, 0, Balance.VirtualWidth, Balance.VirtualHeight);
 
     public Vector2 PointerScreen { get; private set; }
     public int ScrollDelta => _mouse.ScrollWheelValue - _previousMouse.ScrollWheelValue;
     public bool HasTouch => _touches.Count > 0;
+    public bool TouchPressed => AnyTouchPressed();
+    public bool PointerPressed => LeftClick || TouchPressed;
+    public bool PointerHeld => _mouse.LeftButton == ButtonState.Pressed || AnyTouchHeld();
 
-    public void Update()
+    public void Update(Viewport viewport)
     {
+        _viewport = viewport.Bounds;
         _previousKeyboard = _keyboard;
         _previousMouse = _mouse;
         _previousTouches = _touches;
@@ -33,7 +38,7 @@ public sealed class InputState
     public bool Pressed(Keys key) => _keyboard.IsKeyDown(key) && !_previousKeyboard.IsKeyDown(key);
     public bool Released(Keys key) => !_keyboard.IsKeyDown(key) && _previousKeyboard.IsKeyDown(key);
     public bool LeftClick => _mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released;
-    public bool LeftDown => _mouse.LeftButton == ButtonState.Pressed || AnyTouchPressed();
+    public bool LeftDown => _mouse.LeftButton == ButtonState.Pressed;
     public bool RightClick => _mouse.RightButton == ButtonState.Pressed && _previousMouse.RightButton == ButtonState.Released;
     public bool Accept => Pressed(Keys.Enter) || Pressed(Keys.Space) || Pressed(Keys.E) || LeftClick;
     public bool Cancel => Pressed(Keys.Escape) || Pressed(Keys.Back);
@@ -47,22 +52,70 @@ public sealed class InputState
             if (Down(Keys.S) || Down(Keys.Down)) movement.Y += 1f;
             if (Down(Keys.A) || Down(Keys.Left)) movement.X -= 1f;
             if (Down(Keys.D) || Down(Keys.Right)) movement.X += 1f;
-            if (_touches.Count > 0)
-            {
-                var p = _touches[0].Position;
-                var origin = new Vector2(170f, 560f);
-                if (Vector2.DistanceSquared(p, origin) < 180f * 180f)
-                {
-                    movement = MathTools.SafeNormalize(p - origin);
-                }
-            }
+
+            var touchMove = TouchMovement();
+            if (touchMove.LengthSquared() > 0.01f) movement = touchMove;
             return MathTools.SafeNormalize(movement);
         }
     }
 
+    public bool Tapped(Rectangle rect)
+    {
+        if (LeftClick && rect.Contains(_mouse.Position)) return true;
+        foreach (var touch in _touches)
+        {
+            if (touch.State == TouchLocationState.Pressed && rect.Contains(touch.Position.ToPoint())) return true;
+        }
+        return false;
+    }
+
+    public bool Holding(Rectangle rect)
+    {
+        if (_mouse.LeftButton == ButtonState.Pressed && rect.Contains(_mouse.Position)) return true;
+        foreach (var touch in _touches)
+        {
+            if ((touch.State == TouchLocationState.Pressed || touch.State == TouchLocationState.Moved) && rect.Contains(touch.Position.ToPoint())) return true;
+        }
+        return false;
+    }
+
+    public bool TouchPressedOutsideGameplayControls(Rectangle viewport)
+    {
+        foreach (var touch in _touches)
+        {
+            if (touch.State == TouchLocationState.Pressed && !TouchLayout.IsGameplayControl(viewport, touch.Position)) return true;
+        }
+        return false;
+    }
+
     public Vector2 WorldPointer(Camera2D camera, GraphicsDevice graphicsDevice) => camera.ScreenToWorld(graphicsDevice, PointerScreen);
 
+    private Vector2 TouchMovement()
+    {
+        if (_touches.Count == 0) return Vector2.Zero;
+        var movePad = TouchLayout.MovePad(_viewport);
+        var origin = TouchLayout.MoveOrigin(_viewport);
+        foreach (var touch in _touches)
+        {
+            if (touch.State is TouchLocationState.Released or TouchLocationState.Invalid) continue;
+            if (!movePad.Contains(touch.Position.ToPoint())) continue;
+            var delta = touch.Position - origin;
+            if (delta.LengthSquared() < 18f * 18f) return Vector2.Zero;
+            return MathTools.SafeNormalize(delta);
+        }
+        return Vector2.Zero;
+    }
+
     private bool AnyTouchPressed()
+    {
+        foreach (var touch in _touches)
+        {
+            if (touch.State == TouchLocationState.Pressed) return true;
+        }
+        return false;
+    }
+
+    private bool AnyTouchHeld()
     {
         foreach (var touch in _touches)
         {

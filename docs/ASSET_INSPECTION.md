@@ -39,10 +39,10 @@ Uploaded file inspected: `PostApocalypse_AssetPack_v1.1.2.zip`
 | Rust car | `Objects/Vehicles/Rust/Car_1_Rust/Car_1_Rust_Red.png` | 25x37 |
 | Rust barrel | `Objects/Barrel_rust_red_1.png` | 12x16 |
 | Grass/dry ground/asphalt/pavement | `Tiles/Background_*_TileSet.png` crops | 16x16 |
-| Rubble | `Tiles/Garbage_TileSet.png` crop | 16x16 |
-| Building floor | `Tiles/Buildings/Buildings_gray_TileSet.png` crop | 16x16 |
+| Rubble | Procedural cracked-rubble safety tile; garbage/debris art now renders as decorations instead of repeated ground | 16x16 |
+| Building floor | `Tiles/Background_Green_TileSet.png` concrete/floor crops | 16x16 |
 | Building wall | `Tiles/Brick-Wall_TileSet.png` crop | 16x16 |
 
 ## Visual inspection notes
 
-The inspected contact sheets show coherent top-down pixel art across player, zombie, post-apocalypse tiles, vehicles, nature props, buildable walls, and UI inventory icons. Phase 1 binds the highest-impact art first: animated player/zombies, visible world tiles, salvage resources, pickups, and buildables. The remaining integrated art is available in the repo for future systems such as UI skins, weapon overlays, gates, buildings, doors, vehicles, and environmental decoration.
+The inspected contact sheets show coherent top-down pixel art across player, zombie, post-apocalypse tiles, vehicles, nature props, buildable walls, and UI inventory icons. Phase 2 binds animated player/zombies, safer tile crops, salvage resources, pickups, buildables, grass/bush props, tires, cardboard, bins, hydrants, manholes, benches, containers, vents, doors, destroyed walls, brick debris, roof holes, and fence/gate art. Remaining integrated art is available for future systems such as UI skins, weapon overlays, gates, vehicles, and building interiors.

@@ -27,6 +27,25 @@ public enum ResourceKind
     Barrel
 }
 
+public enum DecorationKind
+{
+    GrassTuft,
+    Bush,
+    TireStack,
+    Cardboard,
+    GarbageBin,
+    Hydrant,
+    Manhole,
+    Bench,
+    Container,
+    AirVent,
+    Door,
+    DestroyedWall,
+    BrickDebris,
+    RoofHole,
+    Fence
+}
+
 public readonly record struct ChunkCoord(int X, int Y)
 {
     public static ChunkCoord FromWorld(Vector2 world)
@@ -63,6 +82,25 @@ public sealed class ResourceNode
     }
 }
 
+public sealed class DecorationNode
+{
+    public DecorationNode(string id, DecorationKind kind, Vector2 position, float scale, bool blocksMovement = false)
+    {
+        Id = id;
+        Kind = kind;
+        Position = position;
+        Scale = scale;
+        BlocksMovement = blocksMovement;
+    }
+
+    public string Id { get; }
+    public DecorationKind Kind { get; }
+    public Vector2 Position { get; }
+    public float Scale { get; }
+    public bool BlocksMovement { get; }
+    public RectangleF Bounds => new(Position.X - 13 * Scale, Position.Y - 13 * Scale, 26 * Scale, 26 * Scale);
+}
+
 public sealed class Chunk
 {
     public Chunk(ChunkCoord coord)
@@ -74,6 +112,7 @@ public sealed class Chunk
     public ChunkCoord Coord { get; }
     public TileType[] Tiles { get; }
     public List<ResourceNode> Resources { get; } = new();
+    public List<DecorationNode> Decorations { get; } = new();
     public Rectangle WorldRectangle => new(Coord.X * Balance.ChunkSize * Balance.TileSize, Coord.Y * Balance.ChunkSize * Balance.TileSize, Balance.ChunkSize * Balance.TileSize, Balance.ChunkSize * Balance.TileSize);
 
     public TileType GetLocal(int x, int y) => Tiles[y * Balance.ChunkSize + x];

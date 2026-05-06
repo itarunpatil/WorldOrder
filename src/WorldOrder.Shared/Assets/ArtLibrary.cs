@@ -35,7 +35,7 @@ public sealed class ArtLibrary
 {
     private readonly Dictionary<string, Texture2D> _textures = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<SpriteId, SpriteSheet> _sheets = new();
-    private readonly Dictionary<TileType, Texture2D> _tiles = new();
+    private readonly Dictionary<TileType, List<Texture2D>> _tileVariants = new();
     private readonly GraphicsDevice _graphicsDevice;
 
     public ArtLibrary(GraphicsDevice graphicsDevice)
@@ -55,20 +55,28 @@ public sealed class ArtLibrary
         LoadPostApocalypsePack();
     }
 
-    public Texture2D Tile(TileType type) => _tiles.TryGetValue(type, out var texture) ? texture : _tiles[TileType.Dirt];
-    public Texture2D Texture(string key) => _textures[key];
+    public Texture2D Tile(TileType type) => Tile(type, 0, 0);
+
+    public Texture2D Tile(TileType type, int tileX, int tileY)
+    {
+        if (!_tileVariants.TryGetValue(type, out var list) || list.Count == 0) list = _tileVariants[TileType.Dirt];
+        var index = list.Count == 1 ? 0 : (int)(Hashing.Hash2(tileX, tileY, 63000 + (int)type * 97) % (uint)list.Count);
+        return list[index];
+    }
+
+    public Texture2D Texture(string key) => _textures.TryGetValue(key, out var texture) ? texture : _textures["crate"];
     public bool TrySheet(SpriteId id, out SpriteSheet sheet) => _sheets.TryGetValue(id, out sheet!);
 
     private void CreateProceduralTileSet()
     {
-        _tiles[TileType.Dirt] = CreateTile(new Color(82, 69, 52), new Color(70, 58, 44), 11);
-        _tiles[TileType.DryGrass] = CreateTile(new Color(80, 84, 44), new Color(111, 105, 53), 13);
-        _tiles[TileType.Rubble] = CreateTile(new Color(70, 72, 69), new Color(104, 105, 100), 17);
-        _tiles[TileType.Asphalt] = CreateTile(new Color(42, 43, 44), new Color(58, 59, 60), 23);
-        _tiles[TileType.Pavement] = CreateTile(new Color(91, 92, 87), new Color(120, 118, 109), 29);
-        _tiles[TileType.BuildingFloor] = CreateTile(new Color(74, 70, 66), new Color(102, 92, 84), 31);
-        _tiles[TileType.BuildingWall] = CreateTile(new Color(52, 48, 45), new Color(85, 76, 66), 37);
-        _tiles[TileType.Water] = CreateTile(new Color(31, 58, 65), new Color(41, 90, 99), 41);
+        SetTile(TileType.Dirt, CreateTile(new Color(78, 69, 55), new Color(99, 84, 61), 11));
+        SetTile(TileType.DryGrass, CreateTile(new Color(74, 85, 51), new Color(104, 109, 63), 13));
+        SetTile(TileType.Rubble, CreateTile(new Color(70, 72, 69), new Color(112, 111, 104), 17));
+        SetTile(TileType.Asphalt, CreateTile(new Color(42, 43, 44), new Color(58, 59, 60), 23));
+        SetTile(TileType.Pavement, CreateTile(new Color(91, 92, 87), new Color(120, 118, 109), 29));
+        SetTile(TileType.BuildingFloor, CreateTile(new Color(74, 70, 66), new Color(102, 92, 84), 31));
+        SetTile(TileType.BuildingWall, CreateTile(new Color(52, 48, 45), new Color(85, 76, 66), 37));
+        SetTile(TileType.Water, CreateTile(new Color(31, 58, 65), new Color(41, 90, 99), 41));
     }
 
     private void CreateProceduralSprites()
@@ -88,6 +96,24 @@ public sealed class ArtLibrary
         _textures["wallwood"] = CreateSprite(32, 32, new Color(95, 66, 42), new Color(52, 38, 30), false);
         _textures["wallreinforced"] = CreateSprite(32, 32, new Color(93, 96, 95), new Color(54, 57, 56), false);
         _textures["campfire"] = CreateIcon(new Color(210, 98, 38), new Color(100, 56, 30));
+        _textures["grass1"] = CreateIcon(new Color(83, 116, 62), new Color(57, 79, 42));
+        _textures["grass2"] = _textures["grass1"];
+        _textures["bush"] = CreateSprite(20, 18, new Color(57, 96, 53), new Color(42, 63, 36), false);
+        _textures["tires"] = CreateIcon(new Color(45, 47, 48), new Color(90, 94, 88));
+        _textures["cardboard"] = CreateIcon(new Color(140, 103, 63), new Color(80, 59, 38));
+        _textures["garbagebin"] = CreateIcon(new Color(48, 92, 67), new Color(28, 49, 39));
+        _textures["hydrant"] = CreateIcon(new Color(170, 48, 39), new Color(78, 38, 33));
+        _textures["manhole"] = CreateIcon(new Color(78, 82, 84), new Color(38, 40, 42));
+        _textures["bench"] = CreateSprite(26, 16, new Color(109, 70, 42), new Color(51, 49, 45), false);
+        _textures["container"] = CreateSprite(34, 42, new Color(90, 99, 95), new Color(48, 53, 51), false);
+        _textures["airvent"] = CreateIcon(new Color(106, 112, 112), new Color(60, 64, 64));
+        _textures["door"] = CreateIcon(new Color(118, 95, 67), new Color(58, 45, 34));
+        _textures["destroyedwall"] = CreateSprite(22, 20, new Color(92, 83, 74), new Color(52, 47, 43), false);
+        _textures["brickdebris"] = CreateIcon(new Color(104, 76, 62), new Color(60, 50, 44));
+        _textures["roofhole"] = CreateIcon(new Color(28, 28, 27), new Color(78, 74, 70));
+        _textures["fence"] = CreateIcon(new Color(118, 125, 122), new Color(67, 72, 70));
+        _textures["blood"] = CreateBloodSplat();
+        _textures["slash"] = CreateSlash();
     }
 
     private void LoadPostApocalypsePack()
@@ -117,13 +143,37 @@ public sealed class ArtLibrary
         loaded += LoadTexture("car", "Objects/Vehicles/Rust/Car_1_Rust/Car_1_Rust_Red.png");
         loaded += LoadTexture("barrel", "Objects/Barrel_rust_red_1.png");
 
-        loaded += LoadTileFromSheet(TileType.DryGrass, "Tiles/Background_Green_TileSet.png", 0, 0);
-        loaded += LoadTileFromSheet(TileType.Dirt, "Tiles/Background_Bleak-Yellow_TileSet.png", 7, 5);
-        loaded += LoadTileFromSheet(TileType.Rubble, "Tiles/Garbage_TileSet.png", 0, 0);
-        loaded += LoadTileFromSheet(TileType.Asphalt, "Tiles/Background_Green_TileSet.png", 0, 8);
-        loaded += LoadTileFromSheet(TileType.Pavement, "Tiles/Background_Green_TileSet.png", 0, 10);
-        loaded += LoadTileFromSheet(TileType.BuildingFloor, "Tiles/Buildings/Buildings_gray_TileSet.png", 1, 0);
-        loaded += LoadTileFromSheet(TileType.BuildingWall, "Tiles/Brick-Wall_TileSet.png", 0, 0);
+        loaded += LoadTexture("grass1", "Objects/Nature/Green/Grass_1_Green.png");
+        loaded += LoadTexture("grass2", "Objects/Nature/Green/Grass_2_Green.png");
+        loaded += LoadTexture("bush", "Objects/Nature/Green/Bush_1_Green.png");
+        loaded += LoadTexture("tires", "Objects/2-Tires_Grass_Green.png");
+        loaded += LoadTexture("cardboard", "Objects/Cardboard_1.png");
+        loaded += LoadTexture("garbagebin", "Objects/Garbage-Bin_1.png");
+        loaded += LoadTexture("hydrant", "Objects/Hydrant_1_red.png");
+        loaded += LoadTexture("manhole", "Objects/Manhole.png");
+        loaded += LoadTexture("bench", "Objects/Bench_1_down.png");
+        loaded += LoadTexture("container", "Objects/Container/Container_1_Gray_Vertical.png");
+        loaded += LoadTexture("airvent", "Objects/Buildings/Air-vent_1.png");
+        loaded += LoadTexture("door", "Objects/Buildings/Door_1_Beige.png");
+        loaded += LoadTexture("destroyedwall", "Objects/Buildings/Destroyed-wall_corner.png");
+        loaded += LoadTexture("brickdebris", "Objects/Gray-brick_Debris.png");
+        loaded += LoadTexture("roofhole", "Objects/Buildings/Roof-hole_1_Gray.png");
+        loaded += LoadTexture("fence", "Tiles/Wire-Fence/Wire-Fence_Gate.png");
+
+        loaded += ReplaceTileFromSheet(TileType.DryGrass, "Tiles/Background_Green_TileSet.png", 0, 0);
+        loaded += AddTileVariantFromSheet(TileType.DryGrass, "Tiles/Background_Green_TileSet.png", 3, 1);
+        loaded += AddTileVariantFromSheet(TileType.DryGrass, "Tiles/Background_Green_TileSet.png", 4, 1);
+        loaded += ReplaceTileFromSheet(TileType.Dirt, "Tiles/Background_Bleak-Yellow_TileSet.png", 0, 0);
+        loaded += AddTileVariantFromSheet(TileType.Dirt, "Tiles/Background_Bleak-Yellow_TileSet.png", 2, 1);
+        loaded += ReplaceTileFromSheet(TileType.Asphalt, "Tiles/Background_Green_TileSet.png", 0, 7);
+        loaded += AddTileVariantFromSheet(TileType.Asphalt, "Tiles/Background_Green_TileSet.png", 1, 7);
+        loaded += ReplaceTileFromSheet(TileType.Pavement, "Tiles/Background_Green_TileSet.png", 5, 0);
+        loaded += AddTileVariantFromSheet(TileType.Pavement, "Tiles/Background_Green_TileSet.png", 6, 0);
+        loaded += AddTileVariantFromSheet(TileType.Pavement, "Tiles/Background_Green_TileSet.png", 7, 0);
+        loaded += ReplaceTileFromSheet(TileType.BuildingFloor, "Tiles/Background_Green_TileSet.png", 5, 1);
+        loaded += AddTileVariantFromSheet(TileType.BuildingFloor, "Tiles/Background_Green_TileSet.png", 6, 1);
+        loaded += ReplaceTileFromSheet(TileType.BuildingWall, "Tiles/Brick-Wall_TileSet.png", 0, 0);
+        loaded += AddTileVariantFromSheet(TileType.BuildingWall, "Tiles/Brick-Wall_TileSet.png", 1, 0);
 
         ExternalArtLoaded = loaded > 0;
     }
@@ -145,15 +195,45 @@ public sealed class ArtLibrary
         return 1;
     }
 
-    private int LoadTileFromSheet(TileType type, string path, int tileX, int tileY)
+    private int ReplaceTileFromSheet(TileType type, string path, int tileX, int tileY)
+    {
+        var texture = LoadTileTexture(path, tileX, tileY);
+        if (texture is null) return 0;
+        SetTile(type, texture);
+        return 1;
+    }
+
+    private int AddTileVariantFromSheet(TileType type, string path, int tileX, int tileY)
+    {
+        var texture = LoadTileTexture(path, tileX, tileY);
+        if (texture is null) return 0;
+        AddTileVariant(type, texture);
+        return 1;
+    }
+
+    private Texture2D? LoadTileTexture(string path, int tileX, int tileY)
     {
         using var stream = AssetStorage.OpenPostApocalypseAsset(path);
-        if (stream is null) return 0;
+        if (stream is null) return null;
         using var source = Texture2D.FromStream(_graphicsDevice, stream);
         var rect = new Rectangle(tileX * 16, tileY * 16, 16, 16);
-        if (rect.Right > source.Width || rect.Bottom > source.Height) return 0;
-        _tiles[type] = Crop(source, rect);
-        return 1;
+        if (rect.Right > source.Width || rect.Bottom > source.Height) return null;
+        return Crop(source, rect);
+    }
+
+    private void SetTile(TileType type, Texture2D texture)
+    {
+        _tileVariants[type] = new List<Texture2D> { texture };
+    }
+
+    private void AddTileVariant(TileType type, Texture2D texture)
+    {
+        if (!_tileVariants.TryGetValue(type, out var list))
+        {
+            list = new List<Texture2D>();
+            _tileVariants[type] = list;
+        }
+        list.Add(texture);
     }
 
     private Texture2D Crop(Texture2D source, Rectangle rect)
@@ -240,6 +320,44 @@ public sealed class ArtLibrary
         {
             data[3 * size + i] = accent;
             data[12 * size + i] = Color.Lerp(accent, Color.Black, 0.2f);
+        }
+        var texture = new Texture2D(_graphicsDevice, size, size);
+        texture.SetData(data);
+        return texture;
+    }
+
+    private Texture2D CreateBloodSplat()
+    {
+        const int size = 24;
+        var data = new Color[size * size];
+        Array.Fill(data, Color.Transparent);
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                var dx = x - 12;
+                var dy = y - 12;
+                var r = MathF.Sqrt(dx * dx + dy * dy);
+                if (r < 7f || (Hashing.Unit(x, y, 913) > 0.83f && r < 11f)) data[y * size + x] = new Color(102, 18, 16, 210);
+            }
+        }
+        var texture = new Texture2D(_graphicsDevice, size, size);
+        texture.SetData(data);
+        return texture;
+    }
+
+    private Texture2D CreateSlash()
+    {
+        const int size = 32;
+        var data = new Color[size * size];
+        Array.Fill(data, Color.Transparent);
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                var d = Math.Abs(y - (x / 2 + 7));
+                if (d < 2 && x > 8 && x < 28) data[y * size + x] = new Color(240, 238, 196, 210);
+            }
         }
         var texture = new Texture2D(_graphicsDevice, size, size);
         texture.SetData(data);

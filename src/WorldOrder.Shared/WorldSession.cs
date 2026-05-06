@@ -29,6 +29,7 @@ public sealed class WorldSession
     public ChunkManager Chunks { get; }
     public Player Player { get; }
     public EntityManager Entities { get; }
+    public List<WorldEffect> Effects { get; } = new();
     public bool BuildMode { get; set; }
     public int SelectedBuildableIndex { get; set; }
     public string CurrentMessage => _messages.Count == 0 ? string.Empty : _messages.Peek();
@@ -48,6 +49,7 @@ public sealed class WorldSession
         State.PlayerPosition = Player.Position;
         UpdateVitals(dt);
         HandleBuilding();
+        UpdateEffects(dt);
         UpdateMessages(dt);
         _autoSaveTimer -= dt;
         if (_autoSaveTimer <= 0f)
@@ -67,40 +69,61 @@ public sealed class WorldSession
             return;
         }
         var destroyed = node.Damage(1);
+        EmitEffect(WorldEffectKind.GatherDust, node.Position + new Vector2(0f, -12f), new Vector2(0f, -18f), 0.28f);
         Log($"GATHERING {node.Kind}".ToUpperInvariant());
         if (destroyed)
         {
             Chunks.MarkDepleted(node);
             Entities.DropLoot(node.Position, LootTables.FromResource(node, State.Seed));
+            EmitEffect(WorldEffectKind.HitSpark, node.Position, new Vector2(0f, -12f), 0.30f, "+LOOT", new Color(238, 217, 130));
             Log($"SALVAGED {node.Kind}".ToUpperInvariant());
         }
     }
 
     public void PlayerAttack()
     {
-        var hitCenter = Player.Position + Player.Facing * Balance.PlayerAttackRange;
+        var attackOrigin = Player.Position + Player.Facing * 20f;
+        var bestScore = float.MaxValue;
         Zombie? best = null;
-        var bestSq = float.MaxValue;
         foreach (var zombie in Entities.Zombies)
         {
-            var d = Vector2.DistanceSquared(zombie.Position, hitCenter);
-            if (d < 40f * 40f && d < bestSq)
+            if (zombie.IsDead) continue;
+            var toZombie = zombie.Position - Player.Position;
+            var distance = toZombie.Length();
+            if (distance > Balance.PlayerAttackRange + 32f) continue;
+            var direction = MathTools.SafeNormalize(toZombie);
+            var facingDot = Vector2.Dot(direction, Player.Facing);
+            if (facingDot < 0.18f && distance > 28f) continue;
+            var score = distance - facingDot * 24f;
+            if (score < bestScore)
             {
-                bestSq = d;
+                bestScore = score;
                 best = zombie;
             }
         }
+
+        EmitEffect(WorldEffectKind.Slash, attackOrigin + Player.Facing * 18f, Player.Facing * 22f, 0.16f);
         if (best is not null)
         {
-            var damage = State.Inventory.Count(ItemId.Pistol) > 0 && State.Inventory.Remove(ItemId.Ammo, 1) ? 45f : 18f;
-            best.Damage(damage);
-            if (best.Removed)
+            var hasPistol = State.Inventory.Count(ItemId.Pistol) > 0;
+            var damage = hasPistol && State.Inventory.Remove(ItemId.Ammo, 1) ? 45f : 20f;
+            var knockback = MathTools.SafeNormalize(best.Position - Player.Position) * (hasPistol ? 210f : 145f);
+            best.Damage(damage, knockback);
+            EmitEffect(WorldEffectKind.DamageText, best.Position + new Vector2(0f, -36f), new Vector2(0f, -24f), 0.55f, $"-{(int)damage}", new Color(255, 219, 139));
+            EmitEffect(WorldEffectKind.HitSpark, best.Position + new Vector2(0f, -16f), knockback * 0.06f, 0.22f);
+            if (best.IsDead)
             {
                 State.Inventory.Add(ItemId.Cloth, 1);
                 if (State.Day % 2 == 0) State.Inventory.Add(ItemId.Scrap, 1);
+                EmitEffect(WorldEffectKind.Blood, best.Position, Vector2.Zero, 12f);
+                EmitEffect(WorldEffectKind.DeathPuff, best.Position + new Vector2(0f, -16f), new Vector2(0f, -10f), 0.55f);
                 Log("ZOMBIE DOWN");
             }
             else Log("HIT ZOMBIE");
+        }
+        else
+        {
+            EmitEffect(WorldEffectKind.DamageText, attackOrigin + Player.Facing * 30f, new Vector2(0f, -16f), 0.35f, "MISS", new Color(180, 185, 174));
         }
     }
 
@@ -108,7 +131,14 @@ public sealed class WorldSession
     {
         State.Vitals.Health = Math.Max(0f, State.Vitals.Health - damage);
         State.Vitals.Infection = Math.Min(100f, State.Vitals.Infection + infection);
+        EmitEffect(WorldEffectKind.DamageText, Player.Position + new Vector2(0f, -42f), new Vector2(0f, -20f), 0.55f, $"-{(int)damage}", new Color(231, 80, 70));
         Log("BITTEN");
+    }
+
+    public void EmitEffect(WorldEffectKind kind, Vector2 position, Vector2 velocity, float lifetime, string? text = null, Color? color = null)
+    {
+        Effects.Add(new WorldEffect(kind, position, velocity, lifetime, text, color));
+        if (Effects.Count > 90) Effects.RemoveRange(0, Effects.Count - 90);
     }
 
     public void SaveNow(bool showMessage = true)
@@ -150,7 +180,9 @@ public sealed class WorldSession
         var input = Game.Input;
         if (!BuildMode) return;
         if (input.Pressed(Keys.Tab)) SelectedBuildableIndex = (SelectedBuildableIndex + 1) % GameDefinitions.Buildables.Length;
-        if (!input.LeftClick) return;
+        var viewport = Game.GraphicsDevice.Viewport.Bounds;
+        var placePressed = input.LeftClick || input.TouchPressedOutsideGameplayControls(viewport);
+        if (!placePressed) return;
 
         var pointer = input.WorldPointer(Game.Camera, Game.GraphicsDevice);
         var tx = MathTools.FloorDiv((int)MathF.Floor(pointer.X), Balance.TileSize);
@@ -173,7 +205,14 @@ public sealed class WorldSession
         }
         var key = ChunkManager.BlockKey(tx, ty);
         State.PlacedBlocks[key] = new PlacedBlock { Key = key, Kind = def.Kind, HitPoints = def.HitPoints };
+        EmitEffect(WorldEffectKind.HitSpark, new Vector2((tx + 0.5f) * Balance.TileSize, (ty + 0.5f) * Balance.TileSize), Vector2.Zero, 0.30f, "BUILT", new Color(218, 190, 96));
         Log($"BUILT {def.Name}".ToUpperInvariant());
+    }
+
+    private void UpdateEffects(float dt)
+    {
+        foreach (var effect in Effects) effect.Update(dt);
+        Effects.RemoveAll(e => e.Done && e.Kind != WorldEffectKind.Blood);
     }
 
     private void UpdateMessages(float dt)

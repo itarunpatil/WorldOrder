@@ -8,7 +8,7 @@
 
 ## World generation
 
-The world is divided into 32x32-tile chunks. Tile generation is deterministic from world tile coordinates and the world seed. Loaded chunks are kept inside a radius around the player and removed outside a larger keep radius. This keeps memory and draw costs bounded while preserving an endless world.
+The world is divided into 32x32-tile chunks. Tile generation is deterministic from world tile coordinates and the world seed. Phase 2 uses a seeded city-cell model: road corridors, sidewalks, parcel buildings, spawn-plaza safety, wilderness/water noise, resource nodes, and a separate decoration pass. Loaded chunks are kept inside a radius around the player and removed outside a larger keep radius. This keeps memory and draw costs bounded while preserving an endless world.
 
 ## Saving
 
@@ -16,7 +16,7 @@ Save files are JSON under the user's local app data folder. The save contains se
 
 ## Art pipeline
 
-The game does not require the MonoGame content pipeline for phase 1. Real PostApocalypse PNG art is integrated under `GameAssets/PostApocalypse` and loaded at runtime with `Texture2D.FromStream`. Procedural art exists only as a startup-safe fallback if a required PNG is missing.
+The game does not require the MonoGame content pipeline. Real PostApocalypse PNG art is integrated under `GameAssets/PostApocalypse` and loaded at runtime with `Texture2D.FromStream`. Phase 2 binds more ground variants, environmental props, road props, and building props. Procedural art exists only as a startup-safe fallback if a required PNG is missing.
 
 Packaging paths:
 

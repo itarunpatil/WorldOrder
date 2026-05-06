@@ -22,10 +22,12 @@ public sealed class PlayScreen : GameScreen
 
     public override void Update(GameTime gameTime)
     {
-        if (Game.Input.Pressed(Keys.Escape)) _paused = !_paused;
+        var viewport = Game.GraphicsDevice.Viewport.Bounds;
+        if (Game.Input.Pressed(Keys.Escape) || Game.Input.Tapped(TouchLayout.Pause(viewport))) _paused = !_paused;
         if (_paused)
         {
             if (Game.Input.Pressed(Keys.M)) { _session.SaveNow(); Game.Screens.Change(new MainMenuScreen(Game)); }
+            if (Game.Input.Tapped(new Rectangle(viewport.Width / 2 - 170, viewport.Height / 2 + 54, 340, 46))) { _session.SaveNow(); Game.Screens.Change(new MainMenuScreen(Game)); }
             return;
         }
         Game.Camera.AdjustZoom(Game.Input.ScrollDelta);
@@ -43,11 +45,12 @@ public sealed class PlayScreen : GameScreen
         _hudRenderer.Draw(spriteBatch, _session);
         if (_paused)
         {
-            var rect = new Rectangle(Game.GraphicsDevice.Viewport.Width / 2 - 220, Game.GraphicsDevice.Viewport.Height / 2 - 110, 440, 220);
+            var rect = new Rectangle(Game.GraphicsDevice.Viewport.Width / 2 - 230, Game.GraphicsDevice.Viewport.Height / 2 - 120, 460, 250);
             Game.Ui.Panel(spriteBatch, rect, new Color(225, 188, 84), new Color(12, 14, 14, 235));
-            Game.Ui.Label(spriteBatch, "PAUSED", new Vector2(rect.X + 120, rect.Y + 42), new Color(236, 220, 150), 5);
-            Game.Ui.Label(spriteBatch, "ESC RESUME", new Vector2(rect.X + 96, rect.Y + 124), Color.White, 2);
-            Game.Ui.Label(spriteBatch, "M SAVE AND MENU", new Vector2(rect.X + 96, rect.Y + 158), Color.White, 2);
+            Game.Ui.Label(spriteBatch, "PAUSED", new Vector2(rect.X + 118, rect.Y + 36), new Color(236, 220, 150), 5);
+            Game.Ui.Label(spriteBatch, "ESC / PAUSE BUTTON RESUME", new Vector2(rect.X + 70, rect.Y + 118), Color.White, 2);
+            var menuRect = new Rectangle(rect.X + 60, rect.Y + 174, rect.Width - 120, 46);
+            Game.Ui.Button(spriteBatch, menuRect, "SAVE AND MENU", false);
         }
         spriteBatch.End();
     }

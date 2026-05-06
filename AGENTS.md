@@ -43,17 +43,19 @@ World Order is a modular C# MonoGame post-apocalypse zombie survival game. It mu
 5. Keep Android-specific code only in `src/WorldOrder.Android`; keep Desktop-specific code only in `src/WorldOrder.Desktop`.
 6. For CI changes, test the command locally if possible and keep artifact names commit-hash-based.
 
-## Current phase 1 systems
+## Current phase 2 systems
 
-- Deterministic endless chunks with road/building/resource rules.
+- Deterministic endless chunks with seeded city blocks, roads, sidewalks, buildings, wilderness pockets, resource rules, and decoration passes.
 - Resource gathering and loot drops.
 - Inventory and material costs.
 - Build mode for walls, reinforced walls, floors, and campfires.
 - Player vitals and consumables.
-- Zombies with day escalation and deterministic movement states.
+- Zombies with day escalation, deterministic movement states, hurt/death states, knockback, damage numbers, and impact feedback.
 - Save/load, autosave, and loading screen.
-- Integrated PostApocalypse character, zombie, object, buildable, resource, and tile art.
+- Integrated PostApocalypse character, zombie, object, buildable, resource, tile, decoration, road prop, and building prop art.
 - Procedural art remains only as a startup-safe fallback when an asset is missing.
+- Android has immersive landscape mode and explicit touch UI for menus and gameplay.
+- Desktop supports resizable windows, maximize, and F11/Alt+Enter fullscreen toggling.
 
 ## Next high-value phases
 

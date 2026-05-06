@@ -1,6 +1,5 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using WorldOrder.Core;
 
 namespace WorldOrder.Screens;
@@ -18,7 +17,7 @@ public sealed class SimpleTextScreen : GameScreen
 
     public override void Update(GameTime gameTime)
     {
-        if (Game.Input.Cancel || Game.Input.Accept) Game.Screens.Change(new MainMenuScreen(Game));
+        if (Game.Input.Cancel || Game.Input.TouchPressed || Game.Input.LeftClick) Game.Screens.Change(new MainMenuScreen(Game));
     }
 
     public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
@@ -33,6 +32,7 @@ public sealed class SimpleTextScreen : GameScreen
             Game.Ui.Label(spriteBatch, line, new Vector2(124, y), new Color(210, 216, 204), 2);
             y += 34;
         }
+        Game.Ui.Label(spriteBatch, "TAP / ESC TO RETURN", new Vector2(124, Game.GraphicsDevice.Viewport.Height - 122), new Color(188, 198, 184), 2);
         spriteBatch.End();
     }
 }

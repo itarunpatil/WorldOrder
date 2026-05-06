@@ -2,16 +2,18 @@
 
 World Order is a C# MonoGame post-apocalypse zombie survival game. The repository is set up for Windows DesktopGL and Android builds, with separate GitHub Actions workflows that trigger on every push to every branch.
 
-## Phase 1 playable feature set
+## Phase 2 playable feature set
 
 - Main menu, world creation, save loading, settings/credits, pause menu, and loading screen.
-- Endless deterministic open world with chunk streaming, roads, abandoned buildings, rubble, dry grass, water, and resource placement.
+- Endless deterministic open world with chunk streaming, a rewritten seeded city/wasteland generator, roads, sidewalks, abandoned buildings, safer spawn plaza, resources, and environmental decoration.
 - Survival loop: health, hunger, thirst, stamina, infection pressure, day/night cycle, autosave, manual save.
-- Zombies with deterministic state rules, sight tracking, attacks, escalation by day, soft cap, and chunk-distance cleanup.
-- Gathering, salvage, pickups, inventory, food/water consumption, bandage healing, melee/firearm combat, and loot tables.
+- Zombies with deterministic state rules, sight tracking, attacks, escalation by day, soft cap, hurt flashes, knockback, death states, and chunk-distance cleanup.
+- Gathering, salvage, pickups, inventory, food/water consumption, bandage healing, melee/firearm combat, damage numbers, hit sparks, slash effects, blood decals, and loot tables.
 - Building mode with wooden walls, reinforced walls, floors, and campfires with material costs.
 - Integrated PostApocalypse pixel art from `GameAssets/PostApocalypse`, with procedural fallback only as a safety net.
 - Android package name: `com.world.order`.
+- Android immersive landscape rendering with touch buttons and a left-side movement pad.
+- Desktop windows are resizable/maximizable; press `F11` or `Alt+Enter` for fullscreen.
 
 ## Controls
 
@@ -25,6 +27,7 @@ World Order is a C# MonoGame post-apocalypse zombie survival game. The repositor
 - Heal: `H`
 - Save: `R`
 - Pause: `Esc`, then `M` to save and return to menu
+- Fullscreen/window toggle: `F11` or `Alt+Enter`
 
 ## Required SDKs
 
@@ -37,6 +40,16 @@ World Order is a C# MonoGame post-apocalypse zombie survival game. The repositor
 dotnet restore src/WorldOrder.Desktop/WorldOrder.Desktop.csproj
 dotnet run --project src/WorldOrder.Desktop/WorldOrder.Desktop.csproj
 ```
+
+## Android touch controls
+
+- Left side: movement pad
+- ATK: attack
+- GET: gather/interact
+- BLD: toggle build mode
+- EAT: consume food/water
+- MED: use bandage
+- II: pause
 
 ## Local Android publish
 

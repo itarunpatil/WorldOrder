@@ -15,6 +15,7 @@ public sealed class HudRenderer
     public void Draw(SpriteBatch batch, WorldSession session)
     {
         var ui = _game.Ui;
+        var viewport = _game.GraphicsDevice.Viewport.Bounds;
         var v = session.State.Vitals;
         ui.Panel(batch, new Rectangle(18, 18, 345, 128), new Color(85, 88, 82), new Color(18, 20, 19, 210));
         ui.Label(batch, $"DAY {session.State.Day}  {ClockText(session)}", new Vector2(32, 32), new Color(232, 226, 188), 2);
@@ -27,7 +28,7 @@ public sealed class HudRenderer
         ui.Bar(batch, new Rectangle(32, 126, 160, 14), v.Stamina / 100f, new Color(72, 179, 88), new Color(22, 48, 27));
 
         var x = 20;
-        var y = _game.GraphicsDevice.Viewport.Height - 96;
+        var y = viewport.Height - 96;
         ui.Panel(batch, new Rectangle(x, y, 570, 78), new Color(84, 87, 82), new Color(16, 18, 17, 210));
         var inventory = session.State.Inventory;
         DrawItem(batch, "WOOD", inventory.Count(ItemId.Wood), x + 16, y + 18);
@@ -40,22 +41,48 @@ public sealed class HudRenderer
         if (session.BuildMode)
         {
             var def = GameDefinitions.Buildables[MathTools.ClampInt(session.SelectedBuildableIndex, 0, GameDefinitions.Buildables.Length - 1)];
-            ui.Panel(batch, new Rectangle(_game.GraphicsDevice.Viewport.Width - 360, 20, 332, 86), new Color(211, 170, 80), new Color(22, 24, 23, 225));
-            ui.Label(batch, $"BUILD: {def.Name}".ToUpperInvariant(), new Vector2(_game.GraphicsDevice.Viewport.Width - 342, 36), new Color(244, 229, 154), 2);
-            ui.Label(batch, "1-4 SELECT  TAB NEXT", new Vector2(_game.GraphicsDevice.Viewport.Width - 342, 62), Color.White, 2);
-            ui.Label(batch, CostText(def), new Vector2(_game.GraphicsDevice.Viewport.Width - 342, 84), new Color(190, 212, 184), 2);
+            ui.Panel(batch, new Rectangle(viewport.Width - 360, 20, 332, 86), new Color(211, 170, 80), new Color(22, 24, 23, 225));
+            ui.Label(batch, $"BUILD: {def.Name}".ToUpperInvariant(), new Vector2(viewport.Width - 342, 36), new Color(244, 229, 154), 2);
+            ui.Label(batch, "1-4 SELECT  TAB NEXT", new Vector2(viewport.Width - 342, 62), Color.White, 2);
+            ui.Label(batch, CostText(def), new Vector2(viewport.Width - 342, 84), new Color(190, 212, 184), 2);
         }
 
         if (!string.IsNullOrWhiteSpace(session.CurrentMessage))
         {
             var text = session.CurrentMessage;
             var width = text.Length * 12 + 30;
-            var rect = new Rectangle(_game.GraphicsDevice.Viewport.Width / 2 - width / 2, 28, width, 36);
+            var rect = new Rectangle(viewport.Width / 2 - width / 2, 28, width, 36);
             ui.Panel(batch, rect, new Color(210, 180, 90), new Color(22, 22, 18, 225));
             ui.Label(batch, text, new Vector2(rect.X + 15, rect.Y + 10), Color.White, 2);
         }
 
-        ui.Label(batch, "WASD MOVE  SHIFT SPRINT  E GATHER  SPACE ATTACK  B BUILD  Q EAT/DRINK  H HEAL  R SAVE", new Vector2(20, _game.GraphicsDevice.Viewport.Height - 22), new Color(200, 205, 197), 1);
+        if (OperatingSystem.IsAndroid() || _game.Input.HasTouch) DrawTouchControls(batch, session, viewport);
+        else ui.Label(batch, "WASD MOVE  SHIFT SPRINT  E GATHER  SPACE ATTACK  B BUILD  Q EAT/DRINK  H HEAL  R SAVE  F11 FULLSCREEN", new Vector2(20, viewport.Height - 22), new Color(200, 205, 197), 1);
+    }
+
+    private void DrawTouchControls(SpriteBatch batch, WorldSession session, Rectangle viewport)
+    {
+        var ui = _game.Ui;
+        var origin = TouchLayout.MoveOrigin(viewport);
+        var movePad = TouchLayout.MovePad(viewport);
+        ui.Panel(batch, new Rectangle((int)origin.X - 58, (int)origin.Y - 58, 116, 116), new Color(102, 106, 96) * 0.55f, new Color(20, 22, 22, 95));
+        batch.Draw(_game.Art.Pixel, new Rectangle((int)origin.X - 8, (int)origin.Y - 8, 16, 16), new Color(220, 220, 200) * 0.60f);
+        ui.Label(batch, "MOVE", new Vector2(movePad.X + 32, viewport.Height - 34), new Color(205, 210, 198), 1);
+
+        DrawTouchButton(batch, TouchLayout.Attack(viewport), "ATK", new Color(204, 76, 66));
+        DrawTouchButton(batch, TouchLayout.Gather(viewport), "GET", new Color(202, 160, 70));
+        DrawTouchButton(batch, TouchLayout.Build(viewport), session.BuildMode ? "ON" : "BLD", new Color(110, 145, 210));
+        DrawTouchButton(batch, TouchLayout.Eat(viewport), "EAT", new Color(205, 146, 68));
+        DrawTouchButton(batch, TouchLayout.Heal(viewport), "MED", new Color(212, 218, 208));
+        DrawTouchButton(batch, TouchLayout.Pause(viewport), "II", new Color(190, 190, 180));
+    }
+
+    private void DrawTouchButton(SpriteBatch batch, Rectangle rect, string label, Color border)
+    {
+        _game.Ui.Panel(batch, rect, border * 0.85f, new Color(13, 15, 15, 155));
+        var scale = rect.Height >= 72 ? 2 : 1;
+        var size = _game.Font.Measure(label, scale);
+        _game.Font.DrawShadow(batch, label, new Vector2(rect.Center.X - size.X * 0.5f, rect.Center.Y - size.Y * 0.5f), Color.White, scale);
     }
 
     private void DrawItem(SpriteBatch batch, string label, int count, int x, int y)
@@ -64,7 +91,7 @@ public sealed class HudRenderer
         _game.Ui.Label(batch, count.ToString(), new Vector2(x, y + 22), Color.White, 2);
     }
 
-    private static string CostText(Gameplay.BuildableDefinition def)
+    private static string CostText(BuildableDefinition def)
     {
         return string.Join(" ", def.Cost.Select(c => $"{c.Key}:{c.Value}"));
     }
