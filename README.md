@@ -1,112 +1,103 @@
 # World Order
 
-World Order is a Phase 2 top-down 2D RTS built with C# and MonoGame. The goal of this repository is to be a real playable foundation for a long-running RTS project: menus, world creation, loading, preset map generation, unit selection, touch-safe orders, faction AI, A* pathfinding, fog of war, harvesters, resource fields, combat, projectiles, explosions, minimap, economy and Windows/Android build automation are included.
+World Order is a C# MonoGame post-apocalypse zombie survival game. The repository is set up for Windows DesktopGL and Android builds, with separate GitHub Actions workflows that trigger on every push to every branch.
 
-## Phase 2 gameplay
+## Phase 1 playable feature set
 
-Start the game, select **Play**, create a world, choose map preset/difficulty/enemy factions/allies, wait for the loading screen, then enter the tactical map.
-
-Current playable loop:
-
-- Player command center generates baseline supplies.
-- Spice fields now spawn on the map; harvesters mine them automatically and return cargo to command centers.
-- Build light tanks, heavy tanks and harvesters from the bottom command bar.
-- Select units with left drag on Windows, then right-click to move or attack.
-- On Android, tap a player unit to select, then tap ground to move or tap an enemy to attack.
-- Enemy factions spawn tanks from their command centers and use pathing to attack player/ally forces.
-- Ally factions patrol and attack enemies.
-- Fog of war hides unexplored terrain and enemy units outside vision.
-- Win by destroying all enemy command centers.
-- Lose if your command center is destroyed.
+- Main menu, world creation, save loading, settings/credits, pause menu, and loading screen.
+- Endless deterministic open world with chunk streaming, roads, abandoned buildings, rubble, dry grass, water, and resource placement.
+- Survival loop: health, hunger, thirst, stamina, infection pressure, day/night cycle, autosave, manual save.
+- Zombies with deterministic state rules, sight tracking, attacks, escalation by day, soft cap, and chunk-distance cleanup.
+- Gathering, salvage, pickups, inventory, food/water consumption, bandage healing, melee/firearm combat, and loot tables.
+- Building mode with wooden walls, reinforced walls, floors, and campfires with material costs.
+- Integrated PostApocalypse pixel art from `GameAssets/PostApocalypse`, with procedural fallback only as a safety net.
+- Android package name: `com.world.order`.
 
 ## Controls
 
-Desktop:
+- Move: `WASD` or arrow keys
+- Sprint: `Left Shift`
+- Gather/interact: `E` or left click
+- Attack: `Space`, `F`, or right click
+- Build mode: `B`
+- Select buildable: `1`-`4`, or `Tab` while building
+- Eat/drink: `Q`
+- Heal: `H`
+- Save: `R`
+- Pause: `Esc`, then `M` to save and return to menu
 
-- Left drag: select units.
-- Right click: move selected units or attack an enemy.
-- WASD / arrow keys: pan camera.
-- Mouse wheel: zoom.
-- Escape: return to the world list.
-- F11: toggle fullscreen.
+## Required SDKs
 
-Android:
+- .NET SDK 8.0 or later with `rollForward` enabled by `global.json`
+- Android workload for Android builds: `dotnet workload install android`
 
-- Tap a player unit or button to select/activate it.
-- Tap destination to move selected units. Android touch release coordinates are preserved so menu and HUD buttons register reliably.
-- Tap an enemy to order selected units to attack.
-- Drag/tap near screen edges to pan.
+## Local Windows run
+
+```bash
+dotnet restore src/WorldOrder.Desktop/WorldOrder.Desktop.csproj
+dotnet run --project src/WorldOrder.Desktop/WorldOrder.Desktop.csproj
+```
+
+## Local Android publish
+
+```bash
+dotnet workload install android
+dotnet publish src/WorldOrder.Android/WorldOrder.Android.csproj \
+  -c Release \
+  -f net8.0-android \
+  -p:AndroidPackageFormat=apk \
+  -p:AndroidKeyStore=true \
+  -p:AndroidSigningKeyStore=android/worldorder-dev.keystore \
+  -p:AndroidSigningStorePass=worldorder \
+  -p:AndroidSigningKeyAlias=worldorder \
+  -p:AndroidSigningKeyPass=worldorder \
+  -o artifacts/android
+```
+
+## Integrated asset pack
+
+The supplied PostApocalypse pack is integrated into the private game repository under:
+
+```text
+GameAssets/PostApocalypse/
+```
+
+The source projects package those PNG assets automatically:
+
+- Windows copies them to the publish output under `GameAssets/PostApocalypse`.
+- Android packages them as Android assets and the shared loader opens them through the Android asset manager.
+
+The pack's `LICENSE.txt` is kept in the same folder. Keep this repository private unless the asset license you hold permits public redistribution of the art inside source/build packages. The game code does not require MonoGame content pipeline processing; assets are loaded from PNG streams at runtime.
+
+To refresh the integrated art from the original zip:
+
+```bash
+python tools/import-post-apocalypse-assets.py /path/to/PostApocalypse_AssetPack_v1.1.2.zip --clean
+```
+
+PowerShell:
+
+```powershell
+./tools/import-post-apocalypse-assets.ps1 -AssetZip C:\path\to\PostApocalypse_AssetPack_v1.1.2.zip -Clean
+```
+
+## CI artifacts
+
+- `.github/workflows/build-windows.yml` publishes a Windows x64 single-file app, signs it with the repository development certificate, zips it, and names it `WorldOrder-<commit>-windows-x64.zip`.
+- `.github/workflows/build-android.yml` publishes a signed Android APK using `android/worldorder-dev.keystore` and names it `WorldOrder-<commit>-android.apk`.
+
+The bundled Android keystore and Windows PFX are development credentials for this private repository. Replace them before public distribution.
 
 ## Repository layout
 
 ```text
-Content/                       Raw PNG assets loaded at runtime.
-src/WorldOrder.Shared/         Cross-platform game code.
-src/WorldOrder.Desktop/        Windows DesktopGL MonoGame launcher.
-src/WorldOrder.Android/        Android MonoGame activity/project.
-build/signing/                 Default private-repo Android keystore.
-.github/workflows/             Windows and Android CI build pipelines.
-docs/                          Asset review sheets and phase plan.
+src/WorldOrder.Shared/   Cross-platform game code
+src/WorldOrder.Desktop/  Windows/DesktopGL host
+src/WorldOrder.Android/  Android host
+GameAssets/PostApocalypse/ Integrated source art from the supplied pack
+.github/workflows/       CI builds
+tools/                   Asset refresh helper and manifest
+docs/                    Architecture and asset notes
+android/                 Default Android dev keystore
+windows/                 Default Windows dev code-signing certificate
 ```
-
-## Build locally
-
-Install the .NET 8 SDK. For Android, install the Android workload:
-
-```bash
-dotnet workload install android
-```
-
-Run Windows desktop development build:
-
-```bash
-dotnet run --project src/WorldOrder.Desktop/WorldOrder.Desktop.csproj
-```
-
-Publish Windows x64:
-
-```bash
-dotnet publish src/WorldOrder.Desktop/WorldOrder.Desktop.csproj -c Release -r win-x64 --self-contained true -o artifacts/windows/win-x64 /p:PublishSingleFile=true
-```
-
-Publish a signed Android APK. The Android project declares RuntimeIdentifiers for android-arm, android-arm64, android-x86 and android-x64 in the csproj:
-
-```bash
-dotnet publish src/WorldOrder.Android/WorldOrder.Android.csproj \
-  -f net8.0-android34.0 \
-  -c Release \
-  -p:AndroidKeyStore=true \
-  -p:AndroidSigningKeyStore=build/signing/worldorder.keystore \
-  -p:AndroidSigningKeyAlias=worldorder \
-  -p:AndroidSigningKeyPass=worldorder \
-  -p:AndroidSigningStorePass=worldorder \
-  -p:AndroidPackageFormats=apk
-```
-
-## GitHub Actions outputs
-
-The workflows create downloadable artifacts named with the commit hash:
-
-- `WorldOrder-<commit>-win-x64.zip`
-- `WorldOrder-<commit>-win-arm64.zip`
-- `WorldOrder-<commit>-android-universal-signed.apk`
-
-The Android APK is signed with `build/signing/worldorder.keystore`. The default credentials are intentionally in the repo for this private-repo Phase 1 workflow:
-
-- alias: `worldorder`
-- store password: `worldorder`
-- key password: `worldorder`
-
-Replace this keystore before any public or store release.
-
-## Asset credits
-
-Assets are redistributed as game content for this private development build. Keep these credits visible in any public distribution.
-
-- Tank sprites, tank weapons, effects, boats and RPG desert objects: CraftPix free asset packs. License file in source packs points to CraftPix file licenses.
-- Free Desert Top-Down Tileset: Franco Giachetti / LudicArts.com, Creative Commons Attribution 3.0 International.
-- Bitmap UI font atlas generated as a raster PNG from a system font for this project. No font files are included.
-
-## Production notes
-
-This Phase 2 still avoids MonoGame Content Builder/XNB dependencies by loading raw PNGs with `Texture2D.FromStream`. That keeps the build simple for CI and Android asset packaging. Later phases can move large assets into a formal content pipeline once animations, audio, localization and streaming are finalized.

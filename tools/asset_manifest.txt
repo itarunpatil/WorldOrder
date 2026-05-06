@@ -1,0 +1,28 @@
+# Runtime asset bindings used directly by ArtLibrary.
+# The repository also contains the complete supplied PostApocalypse asset folder under GameAssets/PostApocalypse.
+Character/Main/Idle/Character_down_idle-Sheet6.png
+Character/Main/Run/Character_down_run-Sheet6.png
+Character/Main/Idle/Character_side_idle-Sheet6.png
+Character/Main/Run/Character_side_run-Sheet6.png
+Character/Main/Idle/Character_up_idle-Sheet6.png
+Character/Main/Run/Character_up_run-Sheet6.png
+Enemies/Zombie_Small/Zombie_Small_Down_walk-Sheet6.png
+Enemies/Zombie_Small/Zombie_Small_Side_Walk-Sheet6.png
+Enemies/Zombie_Small/Zombie_Small_Up_Walk-Sheet6.png
+Objects/Pickable/Canned-food.png
+Objects/Pickable/Canned-soup.png
+Objects/Pickable/Bandage.png
+Objects/Pickable/Pistol.png
+Objects/Pickable/Ammo-crate_Green.png
+UI/Inventory/Objects/Icon_Wooden-wall.png
+Objects/Vehicles/Rust/Car_6_Rust_Scrap/Car_6_Rust_Blue_Scrap.png
+Objects/Buildable/Wooden/Wooden-wall_Horizontal.png
+Objects/Buildable/Reinforced/Reinforced_wooden-wall_Horizontal.png
+Objects/Nature/Green/Tree_1_Spruce_Green.png
+Objects/Vehicles/Rust/Car_1_Rust/Car_1_Rust_Red.png
+Objects/Barrel_rust_red_1.png
+Tiles/Background_Green_TileSet.png
+Tiles/Background_Bleak-Yellow_TileSet.png
+Tiles/Garbage_TileSet.png
+Tiles/Buildings/Buildings_gray_TileSet.png
+Tiles/Brick-Wall_TileSet.png

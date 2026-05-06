@@ -1,10 +1,18 @@
+# Build outputs
 bin/
 obj/
 artifacts/
+TestResults/
+
+# IDE
 .vs/
-.vscode/.history/
+.vscode/.vs/
 *.user
 *.suo
+
+# Local archives are not committed; integrated game art lives under GameAssets/PostApocalypse.
+*.zip
+
+# OS
 .DS_Store
-# Keep this default private-repo keystore intentionally committed for CI convenience.
-!build/signing/worldorder.keystore
+Thumbs.db

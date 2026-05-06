@@ -1,32 +1,25 @@
-name: Build Android APK
+name: Build Android
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-  workflow_dispatch:
+    branches:
+      - '**'
 
 permissions:
   contents: read
 
 jobs:
-  android:
-    name: Android signed universal APK
+  build-android:
+    name: Build signed Android APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+        uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          global-json-file: global.json
 
       - name: Install Android workload
         run: dotnet workload install android
@@ -34,30 +27,31 @@ jobs:
       - name: Restore
         run: dotnet restore src/WorldOrder.Android/WorldOrder.Android.csproj
 
-      - name: Publish signed APK
-        shell: bash
+      - name: Publish signed Android APK
         run: |
-          set -euo pipefail
           dotnet publish src/WorldOrder.Android/WorldOrder.Android.csproj \
-            -f net8.0-android34.0 \
             -c Release \
+            -f net8.0-android \
+            -p:AndroidPackageFormat=apk \
             -p:AndroidKeyStore=true \
-            -p:AndroidSigningKeyStore=${{ github.workspace }}/build/signing/worldorder.keystore \
+            -p:AndroidSigningKeyStore=$GITHUB_WORKSPACE/android/worldorder-dev.keystore \
+            -p:AndroidSigningStorePass=worldorder \
             -p:AndroidSigningKeyAlias=worldorder \
             -p:AndroidSigningKeyPass=worldorder \
-            -p:AndroidSigningStorePass=worldorder \
-            -p:AndroidPackageFormats=apk \
-            -p:ApplicationVersion=${{ github.run_number }}
-          mkdir -p artifacts/android
-          short_sha="$(echo "${{ github.sha }}" | cut -c1-12)"
-          signed_apk="$(find src/WorldOrder.Android/bin/Release -iname '*signed*.apk' | head -n 1 || true)"
-          if [ -z "$signed_apk" ]; then signed_apk="$(find src/WorldOrder.Android/bin/Release -iname '*.apk' | head -n 1 || true)"; fi
-          if [ -z "$signed_apk" ]; then echo "No APK produced" >&2; exit 1; fi
-          cp "$signed_apk" "artifacts/android/WorldOrder-${short_sha}-android-universal-signed.apk"
-          sha256sum "artifacts/android/WorldOrder-${short_sha}-android-universal-signed.apk" > "artifacts/android/WorldOrder-${short_sha}-android-universal-signed.apk.sha256"
+            -o artifacts/android
 
-      - name: Upload APK
+      - name: Rename APK by commit hash
+        run: |
+          set -euo pipefail
+          short="${GITHUB_SHA::7}"
+          apk="$(find artifacts/android -type f -name '*.apk' | head -n 1)"
+          test -n "$apk"
+          mkdir -p artifacts/final
+          cp "$apk" "artifacts/final/WorldOrder-${short}-android.apk"
+
+      - name: Upload Android artifact
         uses: actions/upload-artifact@v4
         with:
-          name: WorldOrder-${{ github.sha }}-android-signed
-          path: artifacts/android/*
+          name: WorldOrder-${{ github.sha }}-android
+          path: artifacts/final/WorldOrder-*-android.apk
+          if-no-files-found: error

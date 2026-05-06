@@ -2,46 +2,50 @@ name: Build Windows
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-  workflow_dispatch:
+    branches:
+      - '**'
 
 permissions:
   contents: read
 
 jobs:
-  windows:
-    name: Windows ${{ matrix.rid }}
+  build-windows:
+    name: Build signed Windows artifact
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        rid: [win-x64, win-arm64]
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          global-json-file: global.json
 
       - name: Restore
         run: dotnet restore src/WorldOrder.Desktop/WorldOrder.Desktop.csproj
 
-      - name: Publish
+      - name: Publish Windows app
+        run: dotnet publish src/WorldOrder.Desktop/WorldOrder.Desktop.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=embedded -o artifacts/windows
+
+      - name: Sign Windows executable with repository development certificate
         shell: pwsh
         run: |
-          $ErrorActionPreference = "Stop"
-          $out = "artifacts/windows/${{ matrix.rid }}"
-          New-Item -ItemType Directory -Force -Path "artifacts" | Out-Null
-          dotnet publish src/WorldOrder.Desktop/WorldOrder.Desktop.csproj -c Release -r ${{ matrix.rid }} --self-contained true -o $out /p:PublishSingleFile=true
-          if (-not (Test-Path $out)) { throw "Publish output folder was not created: $out" }
-          $sha = "${{ github.sha }}".Substring(0, 12)
-          Compress-Archive -Path "$out/*" -DestinationPath "artifacts/WorldOrder-$sha-${{ matrix.rid }}.zip" -Force
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe | Where-Object { $_.FullName -match '\\x64\\signtool.exe$' } | Sort-Object FullName | Select-Object -Last 1
+          if (-not $signtool) { throw "signtool.exe was not found on the runner" }
+          & $signtool.FullName sign /f windows/worldorder-dev-codesign.pfx /p worldorder /fd SHA256 artifacts/windows/WorldOrder.exe
 
-      - name: Upload artifact
+      - name: Rename and package by commit hash
+        shell: pwsh
+        run: |
+          $short = "${{ github.sha }}".Substring(0, 7)
+          $out = "artifacts/WorldOrder-$short-windows-x64"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item artifacts/windows/* $out -Recurse -Force
+          Compress-Archive -Path "$out/*" -DestinationPath "artifacts/WorldOrder-$short-windows-x64.zip" -Force
+
+      - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: WorldOrder-${{ github.sha }}-${{ matrix.rid }}
-          path: artifacts/WorldOrder-*.zip
+          name: WorldOrder-${{ github.sha }}-windows-x64
+          path: artifacts/WorldOrder-*-windows-x64.zip
+          if-no-files-found: error
